@@ -1,0 +1,22 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "autoblog-growth-engine",
+  "compatibility_date": "2024-01-01",
+  "compatibility_flags": ["nodejs_compat"],
+  "pages_build_output_dir": "./dist",
+  
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "autoblog-production",
+      "database_id": "placeholder-will-be-replaced-on-deploy"
+    }
+  ],
+  
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "placeholder-kv-id"
+    }
+  ]
+}
