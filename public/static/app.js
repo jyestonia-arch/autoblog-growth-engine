@@ -172,6 +172,7 @@ function showSection(sectionId) {
     case 'overview': loadDashboardData(); break;
     case 'keywords': loadKeywords(); break;
     case 'articles': loadArticles(); break;
+    case 'calendar': loadCalendar(); break;
     case 'linking': loadLinkingStats(); break;
     case 'publishing': loadWebsites(); break;
     case 'analytics': loadSEOHealth(); break;
@@ -693,4 +694,290 @@ function getStatusColor(status) {
     skipped: 'bg-red-100 text-red-700',
   };
   return colors[status] || 'bg-gray-100 text-gray-700';
+}
+
+// ==================== CONTENT CALENDAR ====================
+
+let calendarDate = new Date();
+let calendarView = 'month';
+let calendarArticles = [];
+
+async function loadCalendar() {
+  // Load all articles for calendar
+  const res = await apiCall('/articles?limit=100');
+  if (!res.error) {
+    calendarArticles = res.articles || [];
+  }
+  
+  renderCalendar();
+  loadCalendarSidebar();
+}
+
+function changeCalendarView(view) {
+  calendarView = view;
+  
+  // Update view buttons
+  document.getElementById('view-month').className = view === 'month' 
+    ? 'px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium'
+    : 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300';
+  document.getElementById('view-week').className = view === 'week'
+    ? 'px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium'
+    : 'px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300';
+  
+  // Show/hide views
+  document.getElementById('calendar-month-view').classList.toggle('hidden', view !== 'month');
+  document.getElementById('calendar-week-view').classList.toggle('hidden', view !== 'week');
+  
+  renderCalendar();
+}
+
+function navigateCalendar(direction) {
+  if (calendarView === 'month') {
+    calendarDate.setMonth(calendarDate.getMonth() + direction);
+  } else {
+    calendarDate.setDate(calendarDate.getDate() + (direction * 7));
+  }
+  renderCalendar();
+}
+
+function renderCalendar() {
+  // Update title
+  const titleEl = document.getElementById('calendar-title');
+  if (calendarView === 'month') {
+    titleEl.textContent = calendarDate.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    renderMonthView();
+  } else {
+    const weekStart = getWeekStart(calendarDate);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+    titleEl.textContent = `${formatDateShort(weekStart)} - ${formatDateShort(weekEnd)}`;
+    renderWeekView();
+  }
+}
+
+function renderMonthView() {
+  const grid = document.getElementById('calendar-grid');
+  const year = calendarDate.getFullYear();
+  const month = calendarDate.getMonth();
+  
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  const startDay = firstDay.getDay();
+  const totalDays = lastDay.getDate();
+  
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  let html = '';
+  
+  // Empty cells for days before month starts
+  for (let i = 0; i < startDay; i++) {
+    html += '<div class="min-h-24 p-2 bg-gray-50 rounded-lg"></div>';
+  }
+  
+  // Days of the month
+  for (let day = 1; day <= totalDays; day++) {
+    const date = new Date(year, month, day);
+    const dateStr = date.toISOString().split('T')[0];
+    const isToday = date.getTime() === today.getTime();
+    const isPast = date < today;
+    
+    // Find articles for this day
+    const dayArticles = calendarArticles.filter(a => {
+      const articleDate = a.scheduled_at || a.published_at;
+      if (!articleDate) return false;
+      return articleDate.split('T')[0] === dateStr;
+    });
+    
+    html += `
+      <div class="min-h-24 p-2 ${isToday ? 'bg-indigo-50 ring-2 ring-indigo-500' : isPast ? 'bg-gray-50' : 'bg-white'} rounded-lg border border-gray-100 hover:border-indigo-300 transition cursor-pointer" onclick="openDayView('${dateStr}')">
+        <div class="flex justify-between items-start mb-1">
+          <span class="text-sm font-medium ${isToday ? 'text-indigo-600' : isPast ? 'text-gray-400' : 'text-gray-900'}">${day}</span>
+          ${dayArticles.length > 0 ? `<span class="w-2 h-2 bg-indigo-500 rounded-full"></span>` : ''}
+        </div>
+        <div class="space-y-1">
+          ${dayArticles.slice(0, 2).map(a => `
+            <div class="text-xs p-1 rounded truncate ${a.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
+              ${escapeHtml(a.title.substring(0, 20))}${a.title.length > 20 ? '...' : ''}
+            </div>
+          `).join('')}
+          ${dayArticles.length > 2 ? `<div class="text-xs text-gray-500">+${dayArticles.length - 2} more</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+  
+  grid.innerHTML = html;
+}
+
+function renderWeekView() {
+  const grid = document.getElementById('week-grid');
+  const weekStart = getWeekStart(calendarDate);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  
+  let html = '';
+  
+  for (let i = 0; i < 7; i++) {
+    const date = new Date(weekStart);
+    date.setDate(date.getDate() + i);
+    const dateStr = date.toISOString().split('T')[0];
+    const isToday = date.getTime() === today.getTime();
+    const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
+    const dayNum = date.getDate();
+    
+    // Find articles for this day
+    const dayArticles = calendarArticles.filter(a => {
+      const articleDate = a.scheduled_at || a.published_at;
+      if (!articleDate) return false;
+      return articleDate.split('T')[0] === dateStr;
+    });
+    
+    html += `
+      <div class="flex gap-4 p-4 ${isToday ? 'bg-indigo-50' : 'bg-white'} rounded-lg border border-gray-100">
+        <div class="w-16 text-center">
+          <div class="text-sm text-gray-500">${dayName}</div>
+          <div class="text-2xl font-bold ${isToday ? 'text-indigo-600' : 'text-gray-900'}">${dayNum}</div>
+        </div>
+        <div class="flex-1 space-y-2">
+          ${dayArticles.length === 0 ? `
+            <div class="text-sm text-gray-400 py-2">No content scheduled</div>
+          ` : dayArticles.map(a => `
+            <div class="flex items-center justify-between p-3 ${a.status === 'published' ? 'bg-green-50' : 'bg-yellow-50'} rounded-lg">
+              <div>
+                <p class="font-medium text-gray-900">${escapeHtml(a.title)}</p>
+                <p class="text-sm text-gray-500">${a.status === 'published' ? 'Published' : 'Scheduled'}</p>
+              </div>
+              <span class="px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(a.status)}">${a.status}</span>
+            </div>
+          `).join('')}
+          <button onclick="openScheduleModal('${dateStr}')" class="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-indigo-500 hover:text-indigo-600 transition text-sm">
+            <i class="fas fa-plus mr-1"></i> Add Content
+          </button>
+        </div>
+      </div>
+    `;
+  }
+  
+  grid.innerHTML = html;
+}
+
+async function loadCalendarSidebar() {
+  // Scheduled articles
+  const scheduled = calendarArticles.filter(a => a.status === 'scheduled');
+  const scheduledContainer = document.getElementById('scheduled-articles');
+  document.getElementById('scheduled-count').textContent = scheduled.length;
+  
+  if (scheduled.length > 0) {
+    scheduledContainer.innerHTML = scheduled.map(a => `
+      <div class="p-3 bg-yellow-50 rounded-lg">
+        <p class="font-medium text-gray-900 text-sm truncate">${escapeHtml(a.title)}</p>
+        <p class="text-xs text-gray-500 mt-1"><i class="fas fa-calendar mr-1"></i>${formatDate(a.scheduled_at)}</p>
+      </div>
+    `).join('');
+  } else {
+    scheduledContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No scheduled articles</p>';
+  }
+  
+  // Draft articles
+  const drafts = calendarArticles.filter(a => a.status === 'draft');
+  const draftContainer = document.getElementById('draft-articles');
+  document.getElementById('draft-count').textContent = drafts.length;
+  
+  if (drafts.length > 0) {
+    draftContainer.innerHTML = drafts.map(a => `
+      <div class="p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100" onclick="openScheduleModalForArticle('${a.id}')">
+        <p class="font-medium text-gray-900 text-sm truncate">${escapeHtml(a.title)}</p>
+        <p class="text-xs text-gray-500 mt-1"><i class="fas fa-edit mr-1"></i>Click to schedule</p>
+      </div>
+    `).join('');
+  } else {
+    draftContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No draft articles</p>';
+  }
+  
+  // Published articles
+  const published = calendarArticles.filter(a => a.status === 'published').slice(0, 10);
+  const publishedContainer = document.getElementById('published-articles');
+  document.getElementById('published-count').textContent = calendarArticles.filter(a => a.status === 'published').length;
+  
+  if (published.length > 0) {
+    publishedContainer.innerHTML = published.map(a => `
+      <div class="p-3 bg-green-50 rounded-lg">
+        <p class="font-medium text-gray-900 text-sm truncate">${escapeHtml(a.title)}</p>
+        <p class="text-xs text-gray-500 mt-1"><i class="fas fa-check-circle mr-1"></i>${formatDate(a.published_at)}</p>
+      </div>
+    `).join('');
+  } else {
+    publishedContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No published articles</p>';
+  }
+}
+
+function openDayView(dateStr) {
+  openScheduleModal(dateStr);
+}
+
+function openScheduleModal(dateStr) {
+  // Populate draft articles dropdown
+  const select = document.getElementById('schedule-article');
+  const drafts = calendarArticles.filter(a => a.status === 'draft');
+  
+  select.innerHTML = '<option value="">Select an article...</option>' + 
+    drafts.map(a => `<option value="${a.id}">${escapeHtml(a.title)}</option>`).join('');
+  
+  // Set date
+  if (dateStr) {
+    document.getElementById('schedule-date').value = dateStr;
+  } else {
+    document.getElementById('schedule-date').value = new Date().toISOString().split('T')[0];
+  }
+  
+  document.getElementById('schedule-modal').classList.remove('hidden');
+}
+
+function openScheduleModalForArticle(articleId) {
+  openScheduleModal();
+  document.getElementById('schedule-article').value = articleId;
+}
+
+function closeScheduleModal() {
+  document.getElementById('schedule-modal').classList.add('hidden');
+}
+
+async function confirmSchedule() {
+  const articleId = document.getElementById('schedule-article').value;
+  const date = document.getElementById('schedule-date').value;
+  const time = document.getElementById('schedule-time').value;
+  
+  if (!articleId || !date) {
+    alert('Please select an article and date');
+    return;
+  }
+  
+  const scheduledAt = `${date}T${time}:00.000Z`;
+  
+  const res = await apiCall(`/articles/${articleId}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: 'scheduled', scheduled_at: scheduledAt }),
+  });
+  
+  if (res.error) {
+    alert(res.error);
+    return;
+  }
+  
+  closeScheduleModal();
+  loadCalendar();
+  alert('Article scheduled successfully!');
+}
+
+// Helper functions
+function getWeekStart(date) {
+  const d = new Date(date);
+  const day = d.getDay();
+  d.setDate(d.getDate() - day);
+  return d;
+}
+
+function formatDateShort(date) {
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }

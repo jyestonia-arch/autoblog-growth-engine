@@ -145,6 +145,9 @@ app.get('/', (c) => {
           <a href="#" onclick="showSection('articles')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
             <i class="fas fa-file-alt w-5"></i> Articles
           </a>
+          <a href="#" onclick="showSection('calendar')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
+            <i class="fas fa-calendar-alt w-5"></i> Calendar
+          </a>
           <a href="#" onclick="showSection('linking')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
             <i class="fas fa-link w-5"></i> Internal Links
           </a>
@@ -553,6 +556,139 @@ app.get('/', (c) => {
                   <p class="text-sm text-gray-500">Avg Position</p>
                   <p id="avg-position" class="text-2xl font-bold">-</p>
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Calendar Section -->
+        <section id="section-calendar" class="section hidden">
+          <div class="flex justify-between items-center mb-8">
+            <div>
+              <h2 class="text-2xl font-bold text-gray-900">Content Calendar</h2>
+              <p class="text-gray-500">Plan and schedule your content pipeline</p>
+            </div>
+            <div class="flex gap-3">
+              <button onclick="changeCalendarView('month')" id="view-month" class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium">
+                Month
+              </button>
+              <button onclick="changeCalendarView('week')" id="view-week" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300">
+                Week
+              </button>
+            </div>
+          </div>
+
+          <!-- Calendar Navigation -->
+          <div class="bg-white rounded-xl shadow-sm mb-6">
+            <div class="flex items-center justify-between p-4 border-b">
+              <button onclick="navigateCalendar(-1)" class="p-2 hover:bg-gray-100 rounded-lg transition">
+                <i class="fas fa-chevron-left text-gray-600"></i>
+              </button>
+              <h3 id="calendar-title" class="text-lg font-semibold text-gray-900">December 2024</h3>
+              <button onclick="navigateCalendar(1)" class="p-2 hover:bg-gray-100 rounded-lg transition">
+                <i class="fas fa-chevron-right text-gray-600"></i>
+              </button>
+            </div>
+
+            <!-- Month View -->
+            <div id="calendar-month-view" class="p-4">
+              <!-- Days Header -->
+              <div class="grid grid-cols-7 gap-1 mb-2">
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Sun</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Mon</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Tue</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Wed</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Thu</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Fri</div>
+                <div class="text-center text-sm font-medium text-gray-500 py-2">Sat</div>
+              </div>
+              <!-- Calendar Grid -->
+              <div id="calendar-grid" class="grid grid-cols-7 gap-1">
+                <!-- Days will be populated by JavaScript -->
+              </div>
+            </div>
+
+            <!-- Week View -->
+            <div id="calendar-week-view" class="p-4 hidden">
+              <div id="week-grid" class="space-y-2">
+                <!-- Week days will be populated by JavaScript -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Upcoming Content -->
+          <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <!-- Scheduled Articles -->
+            <div class="bg-white rounded-xl p-6 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-gray-900">
+                  <i class="fas fa-clock text-yellow-500 mr-2"></i>Scheduled
+                </h3>
+                <span id="scheduled-count" class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">0</span>
+              </div>
+              <div id="scheduled-articles" class="space-y-3 max-h-80 overflow-y-auto">
+                <p class="text-gray-500 text-sm text-center py-4">No scheduled articles</p>
+              </div>
+            </div>
+
+            <!-- Draft Articles -->
+            <div class="bg-white rounded-xl p-6 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-gray-900">
+                  <i class="fas fa-edit text-gray-500 mr-2"></i>Drafts
+                </h3>
+                <span id="draft-count" class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">0</span>
+              </div>
+              <div id="draft-articles" class="space-y-3 max-h-80 overflow-y-auto">
+                <p class="text-gray-500 text-sm text-center py-4">No draft articles</p>
+              </div>
+            </div>
+
+            <!-- Recently Published -->
+            <div class="bg-white rounded-xl p-6 shadow-sm">
+              <div class="flex items-center justify-between mb-4">
+                <h3 class="font-semibold text-gray-900">
+                  <i class="fas fa-check-circle text-green-500 mr-2"></i>Published
+                </h3>
+                <span id="published-count" class="px-2 py-1 bg-green-100 text-green-700 text-xs rounded-full">0</span>
+              </div>
+              <div id="published-articles" class="space-y-3 max-h-80 overflow-y-auto">
+                <p class="text-gray-500 text-sm text-center py-4">No published articles</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Schedule Modal -->
+          <div id="schedule-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl w-full max-w-md">
+              <div class="p-6 border-b">
+                <div class="flex justify-between items-center">
+                  <h3 class="text-xl font-bold">Schedule Article</h3>
+                  <button onclick="closeScheduleModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="p-6 space-y-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Article</label>
+                  <select id="schedule-article" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="">Select an article...</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Publish Date</label>
+                  <input type="date" id="schedule-date" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                </div>
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">Publish Time</label>
+                  <input type="time" id="schedule-time" value="09:00" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                </div>
+              </div>
+              <div class="p-6 border-t bg-gray-50 rounded-b-2xl">
+                <button onclick="confirmSchedule()" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition">
+                  <i class="fas fa-calendar-check mr-2"></i>Schedule Article
+                </button>
               </div>
             </div>
           </div>
