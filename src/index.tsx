@@ -55,7 +55,7 @@ app.get('/', (c) => {
           <a href="#features" class="text-gray-600 hover:text-gray-900 transition">Features</a>
           <a href="#how-it-works" class="text-gray-600 hover:text-gray-900 transition">How it Works</a>
           <a href="#pricing" class="text-gray-600 hover:text-gray-900 transition">Pricing</a>
-          <a href="#demo" class="text-gray-600 hover:text-gray-900 transition">Demo</a>
+          <a href="/demo" class="text-gray-600 hover:text-gray-900 transition">Demo</a>
         </div>
         <div class="flex items-center gap-3">
           <a href="/app" class="text-gray-600 hover:text-gray-900 font-medium">Sign In</a>
