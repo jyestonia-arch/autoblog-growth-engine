@@ -21,7 +21,23 @@ import {
   getSitemaps,
   submitSitemap
 } from '../services/google-search-console';
-import type { Bindings, Organization, User, Website, Keyword, Article, KeywordCluster, PLAN_CONFIGS } from '../types';
+import {
+  createCustomer,
+  getCustomer,
+  createCheckoutSession,
+  createBillingPortalSession,
+  getSubscription,
+  cancelSubscription,
+  updateSubscription,
+  resumeSubscription,
+  getInvoices,
+  getUpcomingInvoice,
+  verifyWebhookSignature,
+  mapSubscriptionStatus,
+  getPlanTierFromPriceId,
+  getPlanLimits,
+} from '../services/stripe-service';
+import type { Bindings, Organization, User, Website, Keyword, Article, KeywordCluster, PLAN_CONFIGS, STRIPE_PRICE_IDS } from '../types';
 
 const api = new Hono<{ Bindings: Bindings }>();
 
@@ -1203,6 +1219,593 @@ api.post('/gsc/disconnect', async (c) => {
   ).bind(auth.org.id).run();
 
   return c.json({ success: true });
+});
+
+// ==================== STRIPE BILLING ROUTES ====================
+
+// Stripe Price IDs (replace with your actual Stripe Price IDs)
+const STRIPE_PRICES = {
+  starter: {
+    monthly: 'price_starter_monthly',
+    yearly: 'price_starter_yearly',
+  },
+  growth: {
+    monthly: 'price_growth_monthly', 
+    yearly: 'price_growth_yearly',
+  },
+  scale: {
+    monthly: 'price_scale_monthly',
+    yearly: 'price_scale_yearly',
+  },
+};
+
+api.get('/billing/subscription', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  // Get subscription from database
+  const subscription = await c.env.DB.prepare(
+    `SELECT * FROM subscriptions WHERE org_id = ? ORDER BY created_at DESC LIMIT 1`
+  ).bind(auth.org.id).first() as any;
+
+  if (!subscription) {
+    return c.json({
+      has_subscription: false,
+      plan_tier: 'starter',
+      status: 'none',
+      message: 'No active subscription. Using free tier.',
+    });
+  }
+
+  // If we have Stripe configured and a subscription ID, get live data
+  if (c.env.STRIPE_SECRET_KEY && subscription.stripe_subscription_id) {
+    try {
+      const stripeSubscription = await getSubscription(
+        c.env.STRIPE_SECRET_KEY,
+        subscription.stripe_subscription_id
+      );
+
+      return c.json({
+        has_subscription: true,
+        plan_tier: subscription.plan_tier,
+        status: mapSubscriptionStatus(stripeSubscription.status),
+        current_period_start: new Date(stripeSubscription.current_period_start * 1000).toISOString(),
+        current_period_end: new Date(stripeSubscription.current_period_end * 1000).toISOString(),
+        cancel_at_period_end: stripeSubscription.cancel_at_period_end,
+        trial_ends_at: stripeSubscription.trial_end 
+          ? new Date(stripeSubscription.trial_end * 1000).toISOString() 
+          : null,
+      });
+    } catch (e: any) {
+      console.error('Stripe error:', e.message);
+    }
+  }
+
+  return c.json({
+    has_subscription: true,
+    plan_tier: subscription.plan_tier,
+    status: subscription.status,
+    current_period_start: subscription.current_period_start,
+    current_period_end: subscription.current_period_end,
+    cancel_at_period_end: !!subscription.cancel_at_period_end,
+  });
+});
+
+api.post('/billing/create-checkout', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.STRIPE_SECRET_KEY) {
+    return c.json({ error: 'Stripe not configured. STRIPE_SECRET_KEY is required.' }, 400);
+  }
+
+  const { plan_tier, billing_cycle = 'monthly' } = await c.req.json();
+
+  if (!plan_tier || !['starter', 'growth', 'scale'].includes(plan_tier)) {
+    return c.json({ error: 'Invalid plan tier' }, 400);
+  }
+
+  const priceId = STRIPE_PRICES[plan_tier as keyof typeof STRIPE_PRICES][billing_cycle as 'monthly' | 'yearly'];
+  
+  if (!priceId) {
+    return c.json({ error: 'Invalid billing cycle' }, 400);
+  }
+
+  try {
+    // Check if org already has a Stripe customer
+    let subscription = await c.env.DB.prepare(
+      `SELECT stripe_customer_id FROM subscriptions WHERE org_id = ? LIMIT 1`
+    ).bind(auth.org.id).first() as any;
+
+    let customerId = subscription?.stripe_customer_id;
+
+    // Create customer if doesn't exist
+    if (!customerId) {
+      const user = await c.env.DB.prepare(
+        `SELECT email, name FROM users WHERE org_id = ? AND role = 'owner' LIMIT 1`
+      ).bind(auth.org.id).first() as { email: string; name: string };
+
+      const org = await c.env.DB.prepare(
+        `SELECT name FROM organizations WHERE id = ?`
+      ).bind(auth.org.id).first() as { name: string };
+
+      const customer = await createCustomer(c.env.STRIPE_SECRET_KEY, {
+        email: user.email,
+        name: user.name || org.name,
+        orgId: auth.org.id,
+      });
+
+      customerId = customer.id;
+    }
+
+    // Get URL for redirects
+    const url = new URL(c.req.url);
+    const baseUrl = `${url.protocol}//${url.host}`;
+
+    // Create checkout session
+    const session = await createCheckoutSession(c.env.STRIPE_SECRET_KEY, {
+      customerId,
+      priceId,
+      successUrl: `${baseUrl}/?checkout=success&session_id={CHECKOUT_SESSION_ID}`,
+      cancelUrl: `${baseUrl}/?checkout=canceled`,
+      trialPeriodDays: plan_tier === 'starter' ? undefined : 14, // 14-day trial for Growth/Scale
+      metadata: {
+        org_id: auth.org.id,
+        plan_tier,
+      },
+    });
+
+    return c.json({ 
+      checkout_url: session.url,
+      session_id: session.sessionId,
+    });
+  } catch (e: any) {
+    console.error('Stripe checkout error:', e.message);
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+api.post('/billing/portal', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.STRIPE_SECRET_KEY) {
+    return c.json({ error: 'Stripe not configured' }, 400);
+  }
+
+  // Get customer ID
+  const subscription = await c.env.DB.prepare(
+    `SELECT stripe_customer_id FROM subscriptions WHERE org_id = ? LIMIT 1`
+  ).bind(auth.org.id).first() as any;
+
+  if (!subscription?.stripe_customer_id) {
+    return c.json({ error: 'No subscription found' }, 400);
+  }
+
+  try {
+    const url = new URL(c.req.url);
+    const returnUrl = `${url.protocol}//${url.host}/`;
+
+    const session = await createBillingPortalSession(
+      c.env.STRIPE_SECRET_KEY,
+      subscription.stripe_customer_id,
+      returnUrl
+    );
+
+    return c.json({ portal_url: session.url });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+api.post('/billing/change-plan', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.STRIPE_SECRET_KEY) {
+    return c.json({ error: 'Stripe not configured' }, 400);
+  }
+
+  const { new_plan_tier, billing_cycle = 'monthly' } = await c.req.json();
+
+  if (!new_plan_tier || !['starter', 'growth', 'scale'].includes(new_plan_tier)) {
+    return c.json({ error: 'Invalid plan tier' }, 400);
+  }
+
+  const subscription = await c.env.DB.prepare(
+    `SELECT * FROM subscriptions WHERE org_id = ? AND status = 'active' LIMIT 1`
+  ).bind(auth.org.id).first() as any;
+
+  if (!subscription?.stripe_subscription_id) {
+    return c.json({ error: 'No active subscription found' }, 400);
+  }
+
+  const newPriceId = STRIPE_PRICES[new_plan_tier as keyof typeof STRIPE_PRICES][billing_cycle as 'monthly' | 'yearly'];
+
+  try {
+    // Preview the change
+    const preview = await getUpcomingInvoice(
+      c.env.STRIPE_SECRET_KEY,
+      subscription.stripe_customer_id,
+      subscription.stripe_subscription_id,
+      newPriceId
+    );
+
+    // Apply the change
+    await updateSubscription(
+      c.env.STRIPE_SECRET_KEY,
+      subscription.stripe_subscription_id,
+      newPriceId
+    );
+
+    // Update local database
+    const newLimits = getPlanLimits(new_plan_tier as 'starter' | 'growth' | 'scale');
+    
+    await c.env.DB.prepare(
+      `UPDATE subscriptions SET plan_tier = ?, updated_at = datetime('now') WHERE id = ?`
+    ).bind(new_plan_tier, subscription.id).run();
+
+    await c.env.DB.prepare(
+      `UPDATE organizations SET plan_tier = ?, monthly_post_limit = ? WHERE id = ?`
+    ).bind(new_plan_tier, newLimits.monthlyPosts, auth.org.id).run();
+
+    return c.json({
+      success: true,
+      new_plan_tier,
+      prorated_amount: preview.amount_due / 100,
+      message: `Plan changed to ${new_plan_tier}. Changes are effective immediately.`,
+    });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+api.post('/billing/cancel', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.STRIPE_SECRET_KEY) {
+    return c.json({ error: 'Stripe not configured' }, 400);
+  }
+
+  const { immediately = false } = await c.req.json();
+
+  const subscription = await c.env.DB.prepare(
+    `SELECT * FROM subscriptions WHERE org_id = ? AND status IN ('active', 'trialing') LIMIT 1`
+  ).bind(auth.org.id).first() as any;
+
+  if (!subscription?.stripe_subscription_id) {
+    return c.json({ error: 'No active subscription found' }, 400);
+  }
+
+  try {
+    await cancelSubscription(
+      c.env.STRIPE_SECRET_KEY,
+      subscription.stripe_subscription_id,
+      immediately
+    );
+
+    // Update local database
+    if (immediately) {
+      await c.env.DB.prepare(
+        `UPDATE subscriptions SET status = 'canceled', updated_at = datetime('now') WHERE id = ?`
+      ).bind(subscription.id).run();
+
+      await c.env.DB.prepare(
+        `UPDATE organizations SET plan_tier = 'starter', monthly_post_limit = 10 WHERE id = ?`
+      ).bind(auth.org.id).run();
+    } else {
+      await c.env.DB.prepare(
+        `UPDATE subscriptions SET cancel_at_period_end = 1, updated_at = datetime('now') WHERE id = ?`
+      ).bind(subscription.id).run();
+    }
+
+    return c.json({
+      success: true,
+      canceled_immediately: immediately,
+      message: immediately 
+        ? 'Subscription canceled immediately.' 
+        : `Subscription will be canceled at the end of the billing period (${subscription.current_period_end}).`,
+    });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+api.post('/billing/resume', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.STRIPE_SECRET_KEY) {
+    return c.json({ error: 'Stripe not configured' }, 400);
+  }
+
+  const subscription = await c.env.DB.prepare(
+    `SELECT * FROM subscriptions WHERE org_id = ? AND cancel_at_period_end = 1 LIMIT 1`
+  ).bind(auth.org.id).first() as any;
+
+  if (!subscription?.stripe_subscription_id) {
+    return c.json({ error: 'No canceled subscription to resume' }, 400);
+  }
+
+  try {
+    await resumeSubscription(
+      c.env.STRIPE_SECRET_KEY,
+      subscription.stripe_subscription_id
+    );
+
+    await c.env.DB.prepare(
+      `UPDATE subscriptions SET cancel_at_period_end = 0, updated_at = datetime('now') WHERE id = ?`
+    ).bind(subscription.id).run();
+
+    return c.json({
+      success: true,
+      message: 'Subscription resumed successfully.',
+    });
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+api.get('/billing/invoices', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.STRIPE_SECRET_KEY) {
+    // Return from local database
+    const invoices = await c.env.DB.prepare(
+      `SELECT * FROM payment_history WHERE org_id = ? ORDER BY created_at DESC LIMIT 20`
+    ).bind(auth.org.id).all();
+    return c.json(invoices.results || []);
+  }
+
+  const subscription = await c.env.DB.prepare(
+    `SELECT stripe_customer_id FROM subscriptions WHERE org_id = ? LIMIT 1`
+  ).bind(auth.org.id).first() as any;
+
+  if (!subscription?.stripe_customer_id) {
+    return c.json([]);
+  }
+
+  try {
+    const invoices = await getInvoices(
+      c.env.STRIPE_SECRET_KEY,
+      subscription.stripe_customer_id,
+      20
+    );
+
+    return c.json(invoices.map((inv: any) => ({
+      id: inv.id,
+      amount: inv.amount_paid / 100,
+      currency: inv.currency,
+      status: inv.status,
+      description: inv.lines?.data?.[0]?.description || 'Subscription',
+      invoice_url: inv.hosted_invoice_url,
+      invoice_pdf: inv.invoice_pdf,
+      created_at: new Date(inv.created * 1000).toISOString(),
+    })));
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+api.get('/billing/config', async (c) => {
+  // Return public Stripe config
+  return c.json({
+    stripe_configured: !!c.env.STRIPE_SECRET_KEY,
+    publishable_key: c.env.STRIPE_PUBLISHABLE_KEY || null,
+    plans: [
+      {
+        tier: 'starter',
+        name: 'Starter',
+        price_monthly: 49,
+        price_yearly: 470,
+        posts_per_month: 10,
+        features: ['10 posts/month', 'Basic keyword research', 'Single website', 'Email support'],
+      },
+      {
+        tier: 'growth',
+        name: 'Growth',
+        price_monthly: 149,
+        price_yearly: 1430,
+        posts_per_month: 30,
+        features: ['30 posts/month', 'Full keyword research', 'Internal linking', 'API access', 'GSC integration', '14-day trial'],
+        popular: true,
+      },
+      {
+        tier: 'scale',
+        name: 'Scale',
+        price_monthly: 349,
+        price_yearly: 3350,
+        posts_per_month: 60,
+        features: ['60+ posts/month', 'Multiple domains', 'Priority support', 'Custom integrations', 'White-label', '14-day trial'],
+      },
+    ],
+  });
+});
+
+// Stripe Webhook Handler
+api.post('/webhooks/stripe', async (c) => {
+  if (!c.env.STRIPE_SECRET_KEY) {
+    return c.json({ error: 'Stripe not configured' }, 400);
+  }
+
+  const payload = await c.req.text();
+  const signature = c.req.header('stripe-signature');
+
+  if (!signature) {
+    return c.json({ error: 'No signature' }, 400);
+  }
+
+  // Verify webhook (simplified - in production use proper HMAC verification)
+  let event;
+  if (c.env.STRIPE_WEBHOOK_SECRET) {
+    const result = verifyWebhookSignature(payload, signature, c.env.STRIPE_WEBHOOK_SECRET);
+    if (!result.valid) {
+      return c.json({ error: 'Invalid signature' }, 400);
+    }
+    event = result.event;
+  } else {
+    // Development mode - parse without verification
+    try {
+      event = JSON.parse(payload);
+    } catch {
+      return c.json({ error: 'Invalid payload' }, 400);
+    }
+  }
+
+  // Handle different event types
+  try {
+    switch (event.type) {
+      case 'checkout.session.completed': {
+        const session = event.data.object;
+        const orgId = session.metadata?.org_id;
+        const planTier = session.metadata?.plan_tier || 'starter';
+        
+        if (orgId && session.subscription) {
+          // Get subscription details
+          const stripeSubscription = await getSubscription(
+            c.env.STRIPE_SECRET_KEY,
+            session.subscription
+          );
+
+          // Save subscription to database
+          const subscriptionId = crypto.randomUUID();
+          await c.env.DB.prepare(
+            `INSERT OR REPLACE INTO subscriptions 
+             (id, org_id, stripe_customer_id, stripe_subscription_id, plan_tier, status, 
+              current_period_start, current_period_end, cancel_at_period_end)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            subscriptionId,
+            orgId,
+            session.customer,
+            session.subscription,
+            planTier,
+            mapSubscriptionStatus(stripeSubscription.status),
+            new Date(stripeSubscription.current_period_start * 1000).toISOString(),
+            new Date(stripeSubscription.current_period_end * 1000).toISOString(),
+            stripeSubscription.cancel_at_period_end ? 1 : 0
+          ).run();
+
+          // Update organization plan
+          const limits = getPlanLimits(planTier as 'starter' | 'growth' | 'scale');
+          await c.env.DB.prepare(
+            `UPDATE organizations SET plan_tier = ?, monthly_post_limit = ?, updated_at = datetime('now') 
+             WHERE id = ?`
+          ).bind(planTier, limits.monthlyPosts, orgId).run();
+        }
+        break;
+      }
+
+      case 'customer.subscription.updated': {
+        const subscription = event.data.object;
+        
+        // Find subscription in database
+        const localSub = await c.env.DB.prepare(
+          `SELECT * FROM subscriptions WHERE stripe_subscription_id = ?`
+        ).bind(subscription.id).first() as any;
+
+        if (localSub) {
+          await c.env.DB.prepare(
+            `UPDATE subscriptions SET 
+             status = ?, 
+             current_period_start = ?, 
+             current_period_end = ?,
+             cancel_at_period_end = ?,
+             updated_at = datetime('now')
+             WHERE stripe_subscription_id = ?`
+          ).bind(
+            mapSubscriptionStatus(subscription.status),
+            new Date(subscription.current_period_start * 1000).toISOString(),
+            new Date(subscription.current_period_end * 1000).toISOString(),
+            subscription.cancel_at_period_end ? 1 : 0,
+            subscription.id
+          ).run();
+        }
+        break;
+      }
+
+      case 'customer.subscription.deleted': {
+        const subscription = event.data.object;
+        
+        const localSub = await c.env.DB.prepare(
+          `SELECT * FROM subscriptions WHERE stripe_subscription_id = ?`
+        ).bind(subscription.id).first() as any;
+
+        if (localSub) {
+          await c.env.DB.prepare(
+            `UPDATE subscriptions SET status = 'canceled', updated_at = datetime('now') 
+             WHERE stripe_subscription_id = ?`
+          ).bind(subscription.id).run();
+
+          // Downgrade organization to free tier
+          await c.env.DB.prepare(
+            `UPDATE organizations SET plan_tier = 'starter', monthly_post_limit = 10 
+             WHERE id = ?`
+          ).bind(localSub.org_id).run();
+        }
+        break;
+      }
+
+      case 'invoice.paid': {
+        const invoice = event.data.object;
+        
+        // Find org by customer ID
+        const subscription = await c.env.DB.prepare(
+          `SELECT org_id FROM subscriptions WHERE stripe_customer_id = ?`
+        ).bind(invoice.customer).first() as any;
+
+        if (subscription) {
+          // Record payment
+          const paymentId = crypto.randomUUID();
+          await c.env.DB.prepare(
+            `INSERT INTO payment_history 
+             (id, org_id, stripe_invoice_id, amount, currency, status, description, invoice_url, invoice_pdf)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            paymentId,
+            subscription.org_id,
+            invoice.id,
+            invoice.amount_paid,
+            invoice.currency,
+            'paid',
+            invoice.lines?.data?.[0]?.description || 'Subscription',
+            invoice.hosted_invoice_url,
+            invoice.invoice_pdf
+          ).run();
+
+          // Reset monthly usage at the start of new billing period
+          await c.env.DB.prepare(
+            `UPDATE organizations SET posts_used_this_month = 0, billing_cycle_start = date('now')
+             WHERE id = ?`
+          ).bind(subscription.org_id).run();
+        }
+        break;
+      }
+
+      case 'invoice.payment_failed': {
+        const invoice = event.data.object;
+        
+        const subscription = await c.env.DB.prepare(
+          `SELECT org_id FROM subscriptions WHERE stripe_customer_id = ?`
+        ).bind(invoice.customer).first() as any;
+
+        if (subscription) {
+          await c.env.DB.prepare(
+            `UPDATE subscriptions SET status = 'past_due', updated_at = datetime('now')
+             WHERE org_id = ?`
+          ).bind(subscription.org_id).run();
+        }
+        break;
+      }
+    }
+
+    return c.json({ received: true });
+  } catch (e: any) {
+    console.error('Webhook error:', e.message);
+    return c.json({ error: 'Webhook handler failed' }, 500);
+  }
 });
 
 export default api;

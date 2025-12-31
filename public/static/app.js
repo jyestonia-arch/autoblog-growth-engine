@@ -176,6 +176,7 @@ function showSection(sectionId) {
     case 'linking': loadLinkingStats(); break;
     case 'publishing': loadWebsites(); break;
     case 'analytics': loadSEOHealth(); break;
+    case 'billing': loadBillingData(); break;
   }
 }
 
@@ -1414,3 +1415,323 @@ function getWeekStart(date) {
 function formatDateShort(date) {
   return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
+
+// ==================== BILLING FUNCTIONS ====================
+
+let currentBillingCycle = 'monthly';
+let billingConfig = null;
+
+async function loadBillingData() {
+  // Load billing config
+  const config = await apiCall('/billing/config');
+  if (!config.error) {
+    billingConfig = config;
+    
+    // Show/hide Stripe not configured notice
+    const notConfigured = document.getElementById('stripe-not-configured');
+    if (!config.stripe_configured) {
+      notConfigured?.classList.remove('hidden');
+    } else {
+      notConfigured?.classList.add('hidden');
+    }
+  }
+
+  // Load subscription status
+  await loadSubscriptionStatus();
+  
+  // Load invoices
+  await loadInvoices();
+}
+
+async function loadSubscriptionStatus() {
+  const billingStatus = document.getElementById('billing-status');
+  const subscriptionDetails = document.getElementById('subscription-details');
+  const noSubscription = document.getElementById('no-subscription');
+  const cancelBtn = document.getElementById('cancel-sub-btn');
+  
+  const data = await apiCall('/billing/subscription');
+  
+  if (data.error) {
+    billingStatus.textContent = 'Error';
+    billingStatus.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-600';
+    return;
+  }
+
+  // Update status badge
+  const statusColors = {
+    active: 'bg-green-100 text-green-600',
+    trialing: 'bg-blue-100 text-blue-600',
+    past_due: 'bg-red-100 text-red-600',
+    canceled: 'bg-gray-100 text-gray-600',
+    none: 'bg-gray-100 text-gray-600',
+  };
+  
+  const statusText = {
+    active: 'Active',
+    trialing: 'Trial',
+    past_due: 'Past Due',
+    canceled: 'Canceled',
+    none: 'Free Tier',
+  };
+
+  billingStatus.textContent = statusText[data.status] || data.status;
+  billingStatus.className = `px-3 py-1 rounded-full text-sm font-medium ${statusColors[data.status] || statusColors.none}`;
+
+  // Update plan details
+  const planNames = { starter: 'Starter', growth: 'Growth', scale: 'Scale' };
+  const planPrices = { starter: 49, growth: 149, scale: 349 };
+  const planPosts = { starter: 10, growth: 30, scale: 60 };
+  
+  document.getElementById('current-plan-name').textContent = planNames[data.plan_tier] || 'Starter';
+  document.getElementById('current-plan-price').textContent = `$${planPrices[data.plan_tier] || 49}/month`;
+  
+  // Update usage stats
+  const usage = await apiCall('/billing/usage');
+  if (!usage.error) {
+    document.getElementById('billing-posts-used').textContent = usage.posts_used || 0;
+    document.getElementById('billing-posts-limit').textContent = usage.posts_limit || planPosts[data.plan_tier] || 10;
+  }
+
+  // Update period end
+  if (data.current_period_end) {
+    const endDate = new Date(data.current_period_end);
+    document.getElementById('billing-period-end').textContent = endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  }
+
+  // Show/hide cancel button based on subscription status
+  if (data.has_subscription && data.status === 'active' && !data.cancel_at_period_end) {
+    cancelBtn?.classList.remove('hidden');
+  } else {
+    cancelBtn?.classList.add('hidden');
+  }
+
+  // Show resume button if canceled at period end
+  if (data.cancel_at_period_end) {
+    const actionsDiv = document.getElementById('subscription-actions');
+    if (actionsDiv && !document.getElementById('resume-sub-btn')) {
+      const resumeBtn = document.createElement('button');
+      resumeBtn.id = 'resume-sub-btn';
+      resumeBtn.className = 'px-6 py-3 bg-green-600 text-white rounded-lg font-medium hover:bg-green-700 transition';
+      resumeBtn.innerHTML = '<i class="fas fa-undo mr-2"></i>Resume Subscription';
+      resumeBtn.onclick = resumeSubscription;
+      actionsDiv.appendChild(resumeBtn);
+    }
+    
+    billingStatus.textContent = 'Canceling';
+    billingStatus.className = 'px-3 py-1 rounded-full text-sm font-medium bg-orange-100 text-orange-600';
+  }
+
+  // Update current plan button states
+  document.querySelectorAll('.plan-btn').forEach(btn => {
+    const tier = btn.dataset.tier;
+    if (tier === data.plan_tier && data.has_subscription) {
+      btn.textContent = 'Current Plan';
+      btn.disabled = true;
+      btn.className = 'w-full py-3 bg-gray-200 text-gray-500 rounded-lg font-semibold cursor-not-allowed plan-btn';
+    }
+  });
+}
+
+async function loadInvoices() {
+  const tableBody = document.getElementById('invoices-table');
+  if (!tableBody) return;
+
+  const invoices = await apiCall('/billing/invoices');
+  
+  if (!Array.isArray(invoices) || invoices.length === 0) {
+    tableBody.innerHTML = '<tr><td colspan="5" class="px-4 py-8 text-center text-gray-500">No payment history yet</td></tr>';
+    return;
+  }
+
+  tableBody.innerHTML = invoices.map(inv => `
+    <tr>
+      <td class="px-4 py-3 text-sm text-gray-900">${formatDate(inv.created_at)}</td>
+      <td class="px-4 py-3 text-sm text-gray-600">${escapeHtml(inv.description || 'Subscription')}</td>
+      <td class="px-4 py-3 text-sm font-medium text-gray-900">$${(inv.amount || 0).toFixed(2)}</td>
+      <td class="px-4 py-3">
+        <span class="px-2 py-1 text-xs rounded-full ${inv.status === 'paid' ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}">
+          ${inv.status}
+        </span>
+      </td>
+      <td class="px-4 py-3">
+        ${inv.invoice_url ? `<a href="${inv.invoice_url}" target="_blank" class="text-indigo-600 hover:text-indigo-700"><i class="fas fa-external-link-alt"></i></a>` : '-'}
+      </td>
+    </tr>
+  `).join('');
+}
+
+function setBillingCycle(cycle) {
+  currentBillingCycle = cycle;
+  
+  // Update toggle buttons
+  const monthlyBtn = document.getElementById('cycle-monthly');
+  const yearlyBtn = document.getElementById('cycle-yearly');
+  
+  if (cycle === 'monthly') {
+    monthlyBtn.className = 'px-4 py-2 rounded-md text-sm font-medium bg-white shadow text-gray-900';
+    yearlyBtn.className = 'px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900';
+  } else {
+    monthlyBtn.className = 'px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900';
+    yearlyBtn.className = 'px-4 py-2 rounded-md text-sm font-medium bg-white shadow text-gray-900';
+  }
+  
+  // Update prices display (yearly is 20% off)
+  const multiplier = cycle === 'yearly' ? 0.8 : 1;
+  const suffix = cycle === 'yearly' ? '/year' : '/month';
+  
+  const planPrices = document.querySelectorAll('#pricing-plans > div');
+  const prices = [49, 149, 349];
+  
+  planPrices.forEach((card, index) => {
+    const priceEl = card.querySelector('.text-4xl');
+    if (priceEl) {
+      const price = cycle === 'yearly' ? Math.round(prices[index] * 12 * 0.8) : prices[index];
+      priceEl.textContent = `$${price}`;
+    }
+    const suffixEl = card.querySelector('.text-gray-500');
+    if (suffixEl && suffixEl.textContent.includes('/')) {
+      suffixEl.textContent = suffix;
+    }
+  });
+}
+
+async function selectPlan(tier) {
+  if (!billingConfig?.stripe_configured) {
+    alert('Stripe is not configured. Please set up your Stripe API keys in the environment variables.');
+    return;
+  }
+
+  const btn = document.querySelector(`[data-tier="${tier}"]`);
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading...';
+  }
+
+  try {
+    const res = await apiCall('/billing/create-checkout', {
+      method: 'POST',
+      body: JSON.stringify({
+        plan_tier: tier,
+        billing_cycle: currentBillingCycle,
+      }),
+    });
+
+    if (res.error) {
+      alert(res.error);
+      return;
+    }
+
+    if (res.checkout_url) {
+      window.location.href = res.checkout_url;
+    }
+  } catch (e) {
+    alert('Failed to create checkout session. Please try again.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = tier === 'starter' ? 'Select Plan' : 'Start Free Trial';
+    }
+  }
+}
+
+async function openBillingPortal() {
+  const btn = document.getElementById('manage-billing-btn');
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading...';
+  }
+
+  try {
+    const res = await apiCall('/billing/portal', { method: 'POST' });
+    
+    if (res.error) {
+      alert(res.error);
+      return;
+    }
+
+    if (res.portal_url) {
+      window.location.href = res.portal_url;
+    }
+  } catch (e) {
+    alert('Failed to open billing portal. Please try again.');
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="fas fa-cog mr-2"></i>Manage Billing';
+    }
+  }
+}
+
+function showCancelModal() {
+  document.getElementById('cancel-modal')?.classList.remove('hidden');
+}
+
+function closeCancelModal() {
+  document.getElementById('cancel-modal')?.classList.add('hidden');
+}
+
+async function cancelSubscription(immediately = false) {
+  if (!confirm(`Are you sure you want to cancel your subscription${immediately ? ' immediately' : ' at period end'}?`)) {
+    return;
+  }
+
+  try {
+    const res = await apiCall('/billing/cancel', {
+      method: 'POST',
+      body: JSON.stringify({ immediately }),
+    });
+
+    if (res.error) {
+      alert(res.error);
+      return;
+    }
+
+    closeCancelModal();
+    showToast(res.message, 'success');
+    await loadSubscriptionStatus();
+  } catch (e) {
+    alert('Failed to cancel subscription. Please try again.');
+  }
+}
+
+async function resumeSubscription() {
+  try {
+    const res = await apiCall('/billing/resume', { method: 'POST' });
+
+    if (res.error) {
+      alert(res.error);
+      return;
+    }
+
+    showToast(res.message, 'success');
+    
+    // Remove resume button
+    document.getElementById('resume-sub-btn')?.remove();
+    
+    await loadSubscriptionStatus();
+  } catch (e) {
+    alert('Failed to resume subscription. Please try again.');
+  }
+}
+
+// Check for checkout success/cancel on page load
+document.addEventListener('DOMContentLoaded', () => {
+  const params = new URLSearchParams(window.location.search);
+  
+  if (params.get('checkout') === 'success') {
+    setTimeout(() => {
+      showToast('Subscription activated successfully!', 'success');
+      // Clean URL
+      window.history.replaceState({}, document.title, window.location.pathname);
+      // Reload billing data
+      if (document.getElementById('section-billing')?.classList.contains('hidden') === false) {
+        loadBillingData();
+      }
+    }, 1000);
+  }
+  
+  if (params.get('checkout') === 'canceled') {
+    showToast('Checkout was canceled', 'info');
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+});

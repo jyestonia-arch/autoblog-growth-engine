@@ -165,6 +165,9 @@ app.get('/', (c) => {
           <a href="#" onclick="showSection('analytics')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
             <i class="fas fa-chart-bar w-5"></i> Analytics
           </a>
+          <a href="#" onclick="showSection('billing')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
+            <i class="fas fa-credit-card w-5"></i> Billing
+          </a>
         </nav>
 
         <div class="absolute bottom-6 left-6 right-6">
@@ -818,6 +821,268 @@ app.get('/', (c) => {
                 <button onclick="confirmSchedule()" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition">
                   <i class="fas fa-calendar-check mr-2"></i>Schedule Article
                 </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Billing Section -->
+        <section id="section-billing" class="section hidden">
+          <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900">Billing & Subscription</h2>
+            <p class="text-gray-500">Manage your subscription and payment methods</p>
+          </div>
+
+          <!-- Current Subscription -->
+          <div class="bg-white rounded-xl p-6 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-lg font-semibold">Current Plan</h3>
+              <span id="billing-status" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                Loading...
+              </span>
+            </div>
+
+            <div id="subscription-details">
+              <div class="flex items-center gap-4 mb-6">
+                <div class="w-16 h-16 bg-indigo-100 rounded-xl flex items-center justify-center">
+                  <i id="plan-icon" class="fas fa-rocket text-2xl text-indigo-600"></i>
+                </div>
+                <div>
+                  <h4 id="current-plan-name" class="text-2xl font-bold text-gray-900">Starter</h4>
+                  <p id="current-plan-price" class="text-gray-500">$49/month</p>
+                </div>
+              </div>
+
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                  <p class="text-2xl font-bold text-indigo-600" id="billing-posts-used">0</p>
+                  <p class="text-sm text-gray-500">Posts Used</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                  <p class="text-2xl font-bold text-gray-900" id="billing-posts-limit">10</p>
+                  <p class="text-sm text-gray-500">Posts Limit</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                  <p class="text-2xl font-bold text-green-600" id="billing-period-end">-</p>
+                  <p class="text-sm text-gray-500">Renews On</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg p-4 text-center">
+                  <p class="text-2xl font-bold text-gray-900" id="billing-cycle">Monthly</p>
+                  <p class="text-sm text-gray-500">Billing Cycle</p>
+                </div>
+              </div>
+
+              <div id="subscription-actions" class="flex gap-3">
+                <button onclick="openBillingPortal()" id="manage-billing-btn" class="px-6 py-3 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition">
+                  <i class="fas fa-cog mr-2"></i>Manage Billing
+                </button>
+                <button onclick="showCancelModal()" id="cancel-sub-btn" class="px-6 py-3 border border-red-300 text-red-600 rounded-lg font-medium hover:bg-red-50 transition hidden">
+                  Cancel Subscription
+                </button>
+              </div>
+            </div>
+
+            <div id="no-subscription" class="hidden text-center py-8">
+              <div class="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="fas fa-credit-card text-3xl text-gray-400"></i>
+              </div>
+              <h4 class="text-xl font-semibold text-gray-900 mb-2">No Active Subscription</h4>
+              <p class="text-gray-500 mb-6">You're on the free tier. Upgrade to unlock more posts and features.</p>
+            </div>
+          </div>
+
+          <!-- Pricing Plans -->
+          <div class="mb-8">
+            <div class="flex items-center justify-between mb-6">
+              <h3 class="text-lg font-semibold">Available Plans</h3>
+              <div class="flex items-center gap-2 bg-gray-100 rounded-lg p-1">
+                <button onclick="setBillingCycle('monthly')" id="cycle-monthly" class="px-4 py-2 rounded-md text-sm font-medium bg-white shadow text-gray-900">
+                  Monthly
+                </button>
+                <button onclick="setBillingCycle('yearly')" id="cycle-yearly" class="px-4 py-2 rounded-md text-sm font-medium text-gray-600 hover:text-gray-900">
+                  Yearly <span class="text-green-600">-20%</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6" id="pricing-plans">
+              <!-- Starter Plan -->
+              <div class="bg-white rounded-xl p-6 shadow-sm border-2 border-transparent hover:border-indigo-200 transition">
+                <div class="text-center mb-6">
+                  <h4 class="text-xl font-bold text-gray-900">Starter</h4>
+                  <div class="mt-4">
+                    <span class="text-4xl font-bold text-gray-900">$49</span>
+                    <span class="text-gray-500">/month</span>
+                  </div>
+                </div>
+                <ul class="space-y-3 mb-6">
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>10 posts/month
+                  </li>
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>Basic keyword research
+                  </li>
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>Single website
+                  </li>
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>Email support
+                  </li>
+                </ul>
+                <button onclick="selectPlan('starter')" class="w-full py-3 border-2 border-indigo-600 text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 transition plan-btn" data-tier="starter">
+                  Select Plan
+                </button>
+              </div>
+
+              <!-- Growth Plan -->
+              <div class="bg-white rounded-xl p-6 shadow-sm border-2 border-indigo-500 relative">
+                <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+                  <span class="px-3 py-1 bg-indigo-500 text-white text-xs font-bold rounded-full">MOST POPULAR</span>
+                </div>
+                <div class="text-center mb-6">
+                  <h4 class="text-xl font-bold text-gray-900">Growth</h4>
+                  <div class="mt-4">
+                    <span class="text-4xl font-bold text-gray-900">$149</span>
+                    <span class="text-gray-500">/month</span>
+                  </div>
+                </div>
+                <ul class="space-y-3 mb-6">
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>30 posts/month
+                  </li>
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>Full keyword research
+                  </li>
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>Internal linking
+                  </li>
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>API access
+                  </li>
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>GSC integration
+                  </li>
+                  <li class="flex items-center gap-2 text-indigo-600 font-medium">
+                    <i class="fas fa-gift text-indigo-500"></i>14-day free trial
+                  </li>
+                </ul>
+                <button onclick="selectPlan('growth')" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition plan-btn" data-tier="growth">
+                  Start Free Trial
+                </button>
+              </div>
+
+              <!-- Scale Plan -->
+              <div class="bg-white rounded-xl p-6 shadow-sm border-2 border-transparent hover:border-indigo-200 transition">
+                <div class="text-center mb-6">
+                  <h4 class="text-xl font-bold text-gray-900">Scale</h4>
+                  <div class="mt-4">
+                    <span class="text-4xl font-bold text-gray-900">$349</span>
+                    <span class="text-gray-500">/month</span>
+                  </div>
+                </div>
+                <ul class="space-y-3 mb-6">
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>60+ posts/month
+                  </li>
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>Multiple domains
+                  </li>
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>Priority support
+                  </li>
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>Custom integrations
+                  </li>
+                  <li class="flex items-center gap-2 text-gray-600">
+                    <i class="fas fa-check text-green-500"></i>White-label
+                  </li>
+                  <li class="flex items-center gap-2 text-indigo-600 font-medium">
+                    <i class="fas fa-gift text-indigo-500"></i>14-day free trial
+                  </li>
+                </ul>
+                <button onclick="selectPlan('scale')" class="w-full py-3 border-2 border-indigo-600 text-indigo-600 rounded-lg font-semibold hover:bg-indigo-50 transition plan-btn" data-tier="scale">
+                  Start Free Trial
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Payment History -->
+          <div class="bg-white rounded-xl p-6 shadow-sm">
+            <h3 class="text-lg font-semibold mb-4">Payment History</h3>
+            <div id="payment-history" class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-gray-50">
+                  <tr>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Amount</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+                    <th class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Invoice</th>
+                  </tr>
+                </thead>
+                <tbody id="invoices-table" class="divide-y divide-gray-200">
+                  <tr>
+                    <td colspan="5" class="px-4 py-8 text-center text-gray-500">No payment history yet</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Cancel Subscription Modal -->
+          <div id="cancel-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl w-full max-w-md">
+              <div class="p-6 border-b">
+                <div class="flex justify-between items-center">
+                  <h3 class="text-xl font-bold text-red-600">Cancel Subscription</h3>
+                  <button onclick="closeCancelModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="p-6">
+                <div class="text-center mb-6">
+                  <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <i class="fas fa-exclamation-triangle text-2xl text-red-600"></i>
+                  </div>
+                  <p class="text-gray-600">Are you sure you want to cancel your subscription? You'll lose access to premium features at the end of your billing period.</p>
+                </div>
+                <div class="space-y-3">
+                  <button onclick="cancelSubscription(false)" class="w-full py-3 border border-gray-300 text-gray-700 rounded-lg font-medium hover:bg-gray-50 transition">
+                    Cancel at Period End
+                  </button>
+                  <button onclick="cancelSubscription(true)" class="w-full py-3 bg-red-600 text-white rounded-lg font-medium hover:bg-red-700 transition">
+                    Cancel Immediately
+                  </button>
+                  <button onclick="closeCancelModal()" class="w-full py-3 text-gray-500 hover:text-gray-700 transition">
+                    Keep My Subscription
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Stripe Not Configured Notice -->
+          <div id="stripe-not-configured" class="hidden bg-yellow-50 rounded-xl p-6 border border-yellow-200 mt-6">
+            <div class="flex items-start gap-4">
+              <div class="w-10 h-10 bg-yellow-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                <i class="fas fa-exclamation-triangle text-yellow-600"></i>
+              </div>
+              <div>
+                <h4 class="font-semibold text-yellow-800 mb-2">Stripe Not Configured</h4>
+                <p class="text-sm text-yellow-700 mb-3">
+                  Payment processing requires Stripe configuration. Set the following environment variables:
+                </p>
+                <ul class="text-sm text-yellow-700 space-y-1">
+                  <li><code class="bg-yellow-100 px-1 rounded">STRIPE_SECRET_KEY</code> - Your Stripe secret key</li>
+                  <li><code class="bg-yellow-100 px-1 rounded">STRIPE_PUBLISHABLE_KEY</code> - Your Stripe publishable key</li>
+                  <li><code class="bg-yellow-100 px-1 rounded">STRIPE_WEBHOOK_SECRET</code> - For webhook signature verification</li>
+                </ul>
+                <a href="https://dashboard.stripe.com/apikeys" target="_blank" class="inline-flex items-center gap-2 mt-3 text-yellow-800 hover:text-yellow-900 font-medium">
+                  <i class="fab fa-stripe-s"></i>Get Stripe API Keys
+                  <i class="fas fa-external-link-alt text-xs"></i>
+                </a>
               </div>
             </div>
           </div>

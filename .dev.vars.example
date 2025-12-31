@@ -17,3 +17,15 @@ RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
 # 3. Enable Search Console API and Indexing API
 GSC_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com
 GSC_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxxxxxxx
+
+# Stripe Payment API (for subscription billing)
+# Get your keys from: https://dashboard.stripe.com/apikeys
+# Test mode keys start with sk_test_ and pk_test_
+# Live mode keys start with sk_live_ and pk_live_
+STRIPE_SECRET_KEY=sk_test_xxxxxxxxxxxxxxxxxxxxx
+STRIPE_PUBLISHABLE_KEY=pk_test_xxxxxxxxxxxxxxxxxxxxx
+
+# Stripe Webhook Secret (for secure webhook handling)
+# Get from: https://dashboard.stripe.com/webhooks
+# After creating a webhook endpoint for YOUR_DOMAIN/api/webhooks/stripe
+STRIPE_WEBHOOK_SECRET=whsec_xxxxxxxxxxxxxxxxxxxxx

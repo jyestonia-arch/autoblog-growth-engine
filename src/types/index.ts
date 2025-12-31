@@ -6,7 +6,52 @@ export interface Bindings {
   RESEND_API_KEY?: string;
   GSC_CLIENT_ID?: string;
   GSC_CLIENT_SECRET?: string;
+  STRIPE_SECRET_KEY?: string;
+  STRIPE_WEBHOOK_SECRET?: string;
+  STRIPE_PUBLISHABLE_KEY?: string;
 }
+
+// Stripe/Billing Types
+export interface Subscription {
+  id: string;
+  org_id: string;
+  stripe_customer_id: string;
+  stripe_subscription_id: string;
+  plan_tier: 'starter' | 'growth' | 'scale';
+  status: 'active' | 'canceled' | 'past_due' | 'trialing' | 'unpaid';
+  current_period_start: string;
+  current_period_end: string;
+  cancel_at_period_end: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PaymentHistory {
+  id: string;
+  org_id: string;
+  stripe_invoice_id: string;
+  amount: number;
+  currency: string;
+  status: 'paid' | 'open' | 'void' | 'uncollectible';
+  invoice_url: string | null;
+  invoice_pdf: string | null;
+  created_at: string;
+}
+
+export const STRIPE_PRICE_IDS: Record<string, { monthly: string; yearly: string }> = {
+  starter: {
+    monthly: 'price_starter_monthly',    // Replace with actual Stripe Price IDs
+    yearly: 'price_starter_yearly',
+  },
+  growth: {
+    monthly: 'price_growth_monthly',
+    yearly: 'price_growth_yearly',
+  },
+  scale: {
+    monthly: 'price_scale_monthly',
+    yearly: 'price_scale_yearly',
+  },
+};
 
 // Organization & User Types
 export interface Organization {
