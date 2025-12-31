@@ -450,7 +450,7 @@ function createTranslateModal() {
   const modal = document.createElement('div');
   modal.id = 'translate-modal';
   modal.className = 'hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
-  modal.innerHTML = \`
+  modal.innerHTML = `
     <div class="bg-white rounded-2xl w-full max-w-md">
       <div class="p-6 border-b">
         <div class="flex justify-between items-center">
@@ -488,7 +488,7 @@ function createTranslateModal() {
         </button>
       </div>
     </div>
-  \`;
+  `;
   document.body.appendChild(modal);
 }
 
