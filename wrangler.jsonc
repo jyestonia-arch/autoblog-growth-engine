@@ -11,12 +11,5 @@
       "database_name": "autoblog-production",
       "database_id": "placeholder-will-be-replaced-on-deploy"
     }
-  ],
-  
-  "kv_namespaces": [
-    {
-      "binding": "CACHE",
-      "id": "placeholder-kv-id"
-    }
   ]
 }

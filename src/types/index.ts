@@ -2,7 +2,6 @@
 
 export interface Bindings {
   DB: D1Database;
-  CACHE: KVNamespace;
   OPENAI_API_KEY?: string;
 }
 
