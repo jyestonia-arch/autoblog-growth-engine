@@ -1,4 +1,4 @@
-// AutoBlog Growth Engine - Main Application Entry
+// SaaSBlogPilot - Main Application Entry
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
@@ -23,8 +23,8 @@ app.get('/', (c) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoBlog Growth Engine - AI-Powered SEO Content for SaaS</title>
-  <meta name="description" content="Generate SEO-optimized blog content automatically. AI-powered keyword research, article generation, and publishing for SaaS startups.">
+  <title>SaaSBlogPilot - Autopilot Your SaaS Blog Marketing</title>
+  <meta name="description" content="Put your SaaS blog marketing on autopilot. AI generates SEO content, schedules posts, and publishes automatically—so you can focus on building your product.">
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
@@ -47,9 +47,9 @@ app.get('/', (c) => {
       <div class="flex justify-between items-center h-16">
         <div class="flex items-center gap-2">
           <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
-            <i class="fas fa-rocket text-white"></i>
+            <i class="fas fa-plane text-white"></i>
           </div>
-          <span class="font-bold text-xl text-gray-900">AutoBlog</span>
+          <span class="font-bold text-xl text-gray-900">SaaSBlog<span class="text-indigo-600">Pilot</span></span>
         </div>
         <div class="hidden md:flex items-center gap-8">
           <a href="#features" class="text-gray-600 hover:text-gray-900 transition">Features</a>
@@ -75,20 +75,20 @@ app.get('/', (c) => {
     </div>
     <div class="max-w-7xl mx-auto text-center relative z-10">
       <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm mb-6">
-        <i class="fas fa-sparkles"></i>
-        <span>AI-Powered Content Engine for SaaS Growth</span>
+        <i class="fas fa-plane"></i>
+        <span>Blog Marketing on Autopilot for SaaS Founders</span>
       </div>
       <h1 class="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
-        Automate Your Blog,<br/>
-        <span class="text-yellow-300">10x Your Organic Traffic</span>
+        Stop Writing Blogs.<br/>
+        <span class="text-yellow-300">Start Growing Your SaaS.</span>
       </h1>
       <p class="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
-        Generate SEO-optimized blog posts with AI. From keyword research to publishing—
-        AutoBlog handles your entire content pipeline while you focus on building your product.
+        You're a SaaS founder, not a content marketer. <strong>SaaSBlogPilot</strong> handles your entire blog—from keyword research to publishing—<br class="hidden md:block"/>
+        so you can focus on what matters: building your product.
       </p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center mb-12">
         <a href="/app?register=true" class="px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-xl pulse-glow">
-          <i class="fas fa-rocket mr-2"></i>Start Free Trial
+          <i class="fas fa-plane mr-2"></i>Start Free Trial
         </a>
         <a href="/demo" class="px-8 py-4 bg-white/20 backdrop-blur-sm text-white rounded-xl font-bold text-lg hover:bg-white/30 transition border border-white/30">
           <i class="fas fa-play-circle mr-2"></i>Try Live Demo
@@ -109,20 +109,20 @@ app.get('/', (c) => {
     <div class="max-w-7xl mx-auto px-4">
       <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
         <div>
-          <p class="text-4xl font-bold gradient-text">50K+</p>
-          <p class="text-gray-500">Articles Generated</p>
+          <p class="text-4xl font-bold gradient-text">40+</p>
+          <p class="text-gray-500">Hours Saved / Month</p>
         </div>
         <div>
-          <p class="text-4xl font-bold gradient-text">500+</p>
-          <p class="text-gray-500">SaaS Companies</p>
+          <p class="text-4xl font-bold gradient-text">100%</p>
+          <p class="text-gray-500">Hands-Free Publishing</p>
         </div>
         <div>
-          <p class="text-4xl font-bold gradient-text">2M+</p>
-          <p class="text-gray-500">Organic Visitors</p>
+          <p class="text-4xl font-bold gradient-text">3x</p>
+          <p class="text-gray-500">More Content Output</p>
         </div>
         <div>
           <p class="text-4xl font-bold gradient-text">8</p>
-          <p class="text-gray-500">Languages Supported</p>
+          <p class="text-gray-500">Languages for Global Reach</p>
         </div>
       </div>
     </div>
@@ -133,10 +133,11 @@ app.get('/', (c) => {
     <div class="max-w-7xl mx-auto">
       <div class="text-center mb-16">
         <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-          Everything You Need for <span class="gradient-text">Content Growth</span>
+          Your <span class="gradient-text">Full-Stack Content Team</span>,<br class="hidden md:block"/> Powered by AI
         </h2>
         <p class="text-xl text-gray-600 max-w-2xl mx-auto">
-          A complete content marketing suite designed specifically for SaaS companies
+          No more hiring writers, SEO experts, or content managers.
+          SaaSBlogPilot does it all—automatically.
         </p>
       </div>
       
@@ -245,34 +246,34 @@ app.get('/', (c) => {
     <div class="max-w-7xl mx-auto">
       <div class="text-center mb-16">
         <h2 class="text-3xl md:text-4xl font-bold mb-4">
-          From Zero to <span class="text-yellow-400">Published</span> in Minutes
+          Set It Once. <span class="text-yellow-400">Let It Run Forever.</span>
         </h2>
-        <p class="text-xl text-gray-400">Four simple steps to automated content growth</p>
+        <p class="text-xl text-gray-400">Your blog marketing on true autopilot—no daily work required</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
         <div class="text-center relative">
           <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl font-bold">1</div>
-          <h3 class="text-xl font-bold mb-3">Describe Your SaaS</h3>
-          <p class="text-gray-400">Tell us about your product, target audience, and competitors</p>
+          <h3 class="text-xl font-bold mb-3">Connect Your Blog</h3>
+          <p class="text-gray-400">Link your WordPress—takes 2 minutes. We handle the rest.</p>
           <div class="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-indigo-600 to-transparent -z-10"></div>
         </div>
         <div class="text-center relative">
           <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl font-bold">2</div>
-          <h3 class="text-xl font-bold mb-3">Get AI Keywords</h3>
-          <p class="text-gray-400">Receive tailored keyword clusters based on buyer intent and funnel stage</p>
+          <h3 class="text-xl font-bold mb-3">AI Finds Keywords</h3>
+          <p class="text-gray-400">Automatic keyword research based on your SaaS niche and competitors</p>
           <div class="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-purple-600 to-transparent -z-10"></div>
         </div>
         <div class="text-center relative">
           <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl font-bold">3</div>
-          <h3 class="text-xl font-bold mb-3">Generate Articles</h3>
-          <p class="text-gray-400">One-click SEO-optimized article generation for each keyword</p>
+          <h3 class="text-xl font-bold mb-3">AI Writes Content</h3>
+          <p class="text-gray-400">SEO-optimized articles created automatically on your schedule</p>
           <div class="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-blue-600 to-transparent -z-10"></div>
         </div>
         <div class="text-center">
           <div class="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl font-bold">4</div>
-          <h3 class="text-xl font-bold mb-3">Schedule & Publish</h3>
-          <p class="text-gray-400">Auto-publish to WordPress or download for manual publishing</p>
+          <h3 class="text-xl font-bold mb-3">Auto-Published</h3>
+          <p class="text-gray-400">Posts go live on schedule. You don't lift a finger.</p>
         </div>
       </div>
     </div>
@@ -347,14 +348,91 @@ app.get('/', (c) => {
     </div>
   </section>
 
+  <!-- Pain Point Section -->
+  <section class="py-20 px-4 bg-gray-900 text-white">
+    <div class="max-w-5xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">
+          Sound Familiar?
+        </h2>
+        <p class="text-xl text-gray-400">The content marketing struggle every SaaS founder knows</p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+        <div class="bg-red-900/30 border border-red-500/30 rounded-xl p-6">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center shrink-0 mt-1">
+              <i class="fas fa-times text-red-400"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg mb-2">"I know we need content, but who has time?"</h3>
+              <p class="text-gray-400 text-sm">You're busy shipping features, fixing bugs, and talking to customers. Blog posts keep getting pushed to "next week."</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-red-900/30 border border-red-500/30 rounded-xl p-6">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center shrink-0 mt-1">
+              <i class="fas fa-times text-red-400"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg mb-2">"Freelance writers don't get our product"</h3>
+              <p class="text-gray-400 text-sm">You've tried hiring writers, but explaining B2B SaaS to them takes longer than writing it yourself.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-red-900/30 border border-red-500/30 rounded-xl p-6">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center shrink-0 mt-1">
+              <i class="fas fa-times text-red-400"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg mb-2">"Our competitors are outranking us"</h3>
+              <p class="text-gray-400 text-sm">They publish 3x more content than you. Their blog brings in leads while yours collects dust.</p>
+            </div>
+          </div>
+        </div>
+        
+        <div class="bg-red-900/30 border border-red-500/30 rounded-xl p-6">
+          <div class="flex items-start gap-4">
+            <div class="w-10 h-10 bg-red-500/20 rounded-lg flex items-center justify-center shrink-0 mt-1">
+              <i class="fas fa-times text-red-400"></i>
+            </div>
+            <div>
+              <h3 class="font-bold text-lg mb-2">"SEO feels like a black box"</h3>
+              <p class="text-gray-400 text-sm">Keyword research, internal linking, meta tags... You know it matters, but it's overwhelming.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="bg-gradient-to-r from-green-600 to-emerald-500 rounded-2xl p-8 text-center">
+        <h3 class="text-2xl font-bold mb-4">
+          <i class="fas fa-check-circle mr-2"></i>
+          SaaSBlogPilot Fixes All of This
+        </h3>
+        <p class="text-lg text-white/90 mb-6 max-w-2xl mx-auto">
+          One tool that handles keyword research, content creation, SEO optimization, and publishing—automatically. 
+          Finally, a blog that grows your SaaS without stealing your time.
+        </p>
+        <a href="/demo" class="inline-flex items-center gap-2 px-8 py-4 bg-white text-green-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition">
+          <i class="fas fa-play-circle"></i>
+          See How It Works
+        </a>
+      </div>
+    </div>
+  </section>
+
   <!-- Pricing Section -->
   <section id="pricing" class="py-20 px-4">
     <div class="max-w-7xl mx-auto">
       <div class="text-center mb-16">
         <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-          Simple, Transparent <span class="gradient-text">Pricing</span>
+          Invest in Growth, Not <span class="gradient-text">Content Production</span>
         </h2>
-        <p class="text-xl text-gray-600">Start free, upgrade when you're ready</p>
+        <p class="text-xl text-gray-600">Less than the cost of one freelance article per month</p>
       </div>
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
@@ -464,7 +542,7 @@ app.get('/', (c) => {
         Ready to 10x Your Organic Traffic?
       </h2>
       <p class="text-xl text-white/90 mb-8">
-        Join 500+ SaaS companies using AutoBlog to automate their content marketing.
+        Join 500+ SaaS companies using SaaSBlogPilot to automate their content marketing.
       </p>
       <div class="flex flex-col sm:flex-row gap-4 justify-center">
         <a href="/app?register=true" class="px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-xl">
@@ -484,9 +562,9 @@ app.get('/', (c) => {
         <div>
           <div class="flex items-center gap-2 mb-4">
             <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <i class="fas fa-rocket text-white text-sm"></i>
+              <i class="fas fa-plane text-white text-sm"></i>
             </div>
-            <span class="font-bold text-white">AutoBlog</span>
+            <span class="font-bold text-white">SaaSBlog<span class="text-indigo-400">Pilot</span></span>
           </div>
           <p class="text-sm">AI-powered content marketing for SaaS growth.</p>
         </div>
@@ -518,7 +596,7 @@ app.get('/', (c) => {
         </div>
       </div>
       <div class="border-t border-gray-800 pt-8 text-center text-sm">
-        <p>&copy; 2024 AutoBlog Growth Engine. All rights reserved.</p>
+        <p>&copy; 2024 SaaSBlogPilot. All rights reserved.</p>
       </div>
     </div>
   </footer>
@@ -533,7 +611,7 @@ app.get('/demo', (c) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoBlog Growth Engine - Automated SEO Blog Marketing for SaaS</title>
+  <title>SaaSBlogPilot - Automated SEO Blog Marketing for SaaS</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
@@ -587,11 +665,11 @@ app.get('/demo', (c) => {
       <aside class="sidebar fixed left-0 top-0 bg-gray-900 text-white p-6">
         <a href="/" class="flex items-center gap-3 mb-8 hover:opacity-80 transition">
           <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
-            <i class="fas fa-rocket"></i>
+            <i class="fas fa-plane"></i>
           </div>
           <div>
-            <h1 class="font-bold text-lg">AutoBlog</h1>
-            <p class="text-xs text-gray-400">Growth Engine</p>
+            <h1 class="font-bold text-lg">SaaSBlog<span class="text-indigo-400">Pilot</span></h1>
+            <p class="text-xs text-gray-400">Blog on Autopilot</p>
           </div>
         </a>
 
@@ -1367,7 +1445,7 @@ app.get('/demo', (c) => {
             <div id="subscription-details">
               <div class="flex items-center gap-4 mb-6">
                 <div class="w-16 h-16 bg-indigo-100 rounded-xl flex items-center justify-center">
-                  <i id="plan-icon" class="fas fa-rocket text-2xl text-indigo-600"></i>
+                  <i id="plan-icon" class="fas fa-plane text-2xl text-indigo-600"></i>
                 </div>
                 <div>
                   <h4 id="current-plan-name" class="text-2xl font-bold text-gray-900">Starter</h4>
@@ -1625,7 +1703,7 @@ app.get('/app', (c) => {
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoBlog Growth Engine - Dashboard</title>
+  <title>SaaSBlogPilot - Dashboard</title>
   <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
@@ -1651,7 +1729,7 @@ app.get('/app', (c) => {
     <div id="loading" class="flex items-center justify-center min-h-screen">
       <div class="text-center">
         <i class="fas fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
-        <p class="text-gray-600">Loading AutoBlog...</p>
+        <p class="text-gray-600">Loading SaaSBlogPilot...</p>
       </div>
     </div>
 
@@ -1660,9 +1738,9 @@ app.get('/app', (c) => {
       <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
         <div class="text-center mb-8">
           <a href="/" class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4 hover:bg-indigo-200 transition">
-            <i class="fas fa-rocket text-2xl text-indigo-600"></i>
+            <i class="fas fa-plane text-2xl text-indigo-600"></i>
           </a>
-          <h1 class="text-2xl font-bold text-gray-900">AutoBlog Growth Engine</h1>
+          <h1 class="text-2xl font-bold text-gray-900">SaaSBlogPilot</h1>
           <p class="text-gray-500 mt-2">Automated SEO Content for SaaS Startups</p>
         </div>
 
@@ -1738,11 +1816,11 @@ app.get('/app', (c) => {
       <aside class="sidebar fixed left-0 top-0 bg-gray-900 text-white p-6">
         <a href="/" class="flex items-center gap-3 mb-8 hover:opacity-80 transition">
           <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
-            <i class="fas fa-rocket"></i>
+            <i class="fas fa-plane"></i>
           </div>
           <div>
-            <h1 class="font-bold text-lg">AutoBlog</h1>
-            <p class="text-xs text-gray-400">Growth Engine</p>
+            <h1 class="font-bold text-lg">SaaSBlog<span class="text-indigo-400">Pilot</span></h1>
+            <p class="text-xs text-gray-400">Blog on Autopilot</p>
           </div>
         </a>
 
