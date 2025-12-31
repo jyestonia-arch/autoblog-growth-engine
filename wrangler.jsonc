@@ -14,6 +14,6 @@
   ],
 
   "vars": {
-    "ANTHROPIC_API_KEY": ""
+    "ANTHROPIC_API_KEY": "REDACTED_API_KEY"
   }
 }
