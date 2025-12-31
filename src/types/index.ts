@@ -2,7 +2,7 @@
 
 export interface Bindings {
   DB: D1Database;
-  OPENAI_API_KEY?: string;
+  ANTHROPIC_API_KEY?: string;
 }
 
 // Organization & User Types

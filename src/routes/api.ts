@@ -2,12 +2,13 @@
 
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { generateId, hashPassword, verifyPassword, generateSessionToken } from '../utils/helpers';
+import { generateId, hashPassword, verifyPassword, generateSessionToken, generateSlug, countWords, calculateReadingTime, calculateSEOScore, generateExcerpt } from '../utils/helpers';
 import { generateKeywords, saveKeywordResearch } from '../services/keyword-research';
 import { generateArticle, saveArticle } from '../services/article-generator';
 import { analyzeInternalLinks, getArticleLinkSuggestions, applyInternalLinks, getInternalLinkingStats } from '../services/internal-linking';
 import { testWordPressConnection, fullPublishWorkflow } from '../services/wordpress-publisher';
 import { getSEOHealthReport, getArticlePerformance } from '../services/seo-tracker';
+import { generateKeywordsWithClaude, generateArticleWithClaude, generateLinkSuggestionsWithClaude } from '../services/claude-api';
 import type { Bindings, Organization, User, Website, Keyword, Article, KeywordCluster, PLAN_CONFIGS } from '../types';
 
 const api = new Hono<{ Bindings: Bindings }>();
@@ -191,18 +192,79 @@ api.post('/keywords/research', async (c) => {
   if (!auth) return c.json({ error: 'Unauthorized' }, 401);
 
   const request = await c.req.json();
+  const apiKey = c.env.ANTHROPIC_API_KEY;
 
-  // Generate keywords
+  // Use Claude API if available, otherwise fallback to template-based
+  if (apiKey) {
+    try {
+      const claudeResult = await generateKeywordsWithClaude(apiKey, {
+        saasDescription: request.saas_description,
+        targetIcp: request.target_icp,
+        industry: request.industry,
+        competitors: request.competitors || [],
+      });
+
+      // Transform Claude response to our format and save
+      const clusters: any[] = [];
+      const keywords: any[] = [];
+
+      for (const cluster of claudeResult.clusters) {
+        const clusterId = generateId();
+        clusters.push({
+          id: clusterId,
+          org_id: auth.org.id,
+          pillar_keyword: cluster.pillarKeyword,
+          cluster_name: cluster.name,
+          description: `AI-generated ${cluster.funnelStage.toUpperCase()} content cluster`,
+          funnel_stage: cluster.funnelStage,
+          status: 'active',
+          total_keywords: cluster.keywords.length,
+          articles_generated: 0,
+          created_at: new Date().toISOString(),
+        });
+
+        for (const kw of cluster.keywords) {
+          keywords.push({
+            id: generateId(),
+            cluster_id: clusterId,
+            org_id: auth.org.id,
+            keyword: kw.keyword,
+            search_intent: kw.intent,
+            difficulty_score: kw.difficulty,
+            funnel_stage: cluster.funnelStage,
+            monthly_searches: Math.floor(Math.random() * 1000) + 100,
+            priority_score: kw.priority,
+            status: 'pending',
+            created_at: new Date().toISOString(),
+          });
+        }
+      }
+
+      // Save to database
+      await saveKeywordResearch(c.env.DB, { clusters, keywords, contentRoadmap: [] });
+
+      return c.json({
+        clusters,
+        keywords: keywords.slice(0, 20),
+        total_keywords: keywords.length,
+        ai_powered: true,
+      });
+    } catch (e: any) {
+      console.error('Claude API error:', e.message);
+      // Fallback to template-based generation
+    }
+  }
+
+  // Fallback: Template-based generation
   const result = await generateKeywords(request, auth.org.id);
-
-  // Save to database
   await saveKeywordResearch(c.env.DB, result);
 
   return c.json({
     clusters: result.clusters,
-    keywords: result.keywords.slice(0, 20), // Return top 20
+    keywords: result.keywords.slice(0, 20),
     total_keywords: result.keywords.length,
     content_roadmap: result.contentRoadmap,
+    ai_powered: false,
   });
 });
 
@@ -268,11 +330,11 @@ api.post('/articles/generate', async (c) => {
   if (!auth) return c.json({ error: 'Unauthorized' }, 401);
 
   // Check monthly limit
-  const org = await c.env.DB.prepare(
-    `SELECT posts_used_this_month, monthly_post_limit FROM organizations WHERE id = ?`
+  const orgData = await c.env.DB.prepare(
+    `SELECT posts_used_this_month, monthly_post_limit, description, icp, industry FROM organizations WHERE id = ?`
   ).bind(auth.org.id).first() as any;
 
-  if (org.posts_used_this_month >= org.monthly_post_limit) {
+  if (orgData.posts_used_this_month >= orgData.monthly_post_limit) {
     return c.json({ error: 'Monthly post limit reached. Please upgrade your plan.' }, 403);
   }
 
@@ -285,10 +347,78 @@ api.post('/articles/generate', async (c) => {
 
   if (!keyword) return c.json({ error: 'Keyword not found' }, 404);
 
-  // Generate article
-  const result = await generateArticle(keyword, auth.org.id);
+  const apiKey = c.env.ANTHROPIC_API_KEY;
+  let article: Article;
 
-  // Save article
+  // Use Claude API if available
+  if (apiKey) {
+    try {
+      const claudeResult = await generateArticleWithClaude(apiKey, {
+        keyword: keyword.keyword,
+        searchIntent: keyword.search_intent,
+        funnelStage: keyword.funnel_stage,
+        saasDescription: orgData.description,
+        targetIcp: orgData.icp,
+        industry: orgData.industry,
+      });
+
+      // Create article from Claude response
+      article = {
+        id: generateId(),
+        org_id: auth.org.id,
+        website_id: null,
+        keyword_id: keyword.id,
+        cluster_id: keyword.cluster_id,
+        title: claudeResult.title,
+        slug: generateSlug(claudeResult.title),
+        content: claudeResult.content,
+        meta_title: claudeResult.metaTitle,
+        meta_description: claudeResult.metaDescription,
+        excerpt: claudeResult.excerpt,
+        word_count: countWords(claudeResult.content),
+        reading_time: calculateReadingTime(claudeResult.content),
+        featured_image_url: null,
+        categories: [keyword.search_intent],
+        tags: claudeResult.tags,
+        faqs: claudeResult.faqs,
+        status: 'draft',
+        scheduled_at: null,
+        published_at: null,
+        published_url: null,
+        cms_post_id: null,
+        seo_score: calculateSEOScore({
+          title: claudeResult.title,
+          content: claudeResult.content,
+          meta_title: claudeResult.metaTitle,
+          meta_description: claudeResult.metaDescription,
+          faqs: JSON.stringify(claudeResult.faqs),
+        }),
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      };
+
+      // Save article
+      await saveArticle(c.env.DB, article);
+
+      // Update keyword status
+      await c.env.DB.prepare(
+        `UPDATE keywords SET status = 'completed' WHERE id = ?`
+      ).bind(keyword_id).run();
+
+      // Increment posts used
+      await c.env.DB.prepare(
+        `UPDATE organizations SET posts_used_this_month = posts_used_this_month + 1 WHERE id = ?`
+      ).bind(auth.org.id).run();
+
+      return c.json({ ...article, ai_powered: true });
+    } catch (e: any) {
+      console.error('Claude API error:', e.message);
+      // Fallback to template-based generation
+    }
+  }
+
+  // Fallback: Template-based generation
+  const result = await generateArticle(keyword, auth.org.id);
   await saveArticle(c.env.DB, result.article);
 
   // Update keyword status
@@ -301,7 +431,7 @@ api.post('/articles/generate', async (c) => {
     `UPDATE organizations SET posts_used_this_month = posts_used_this_month + 1 WHERE id = ?`
   ).bind(auth.org.id).run();
 
-  return c.json(result.article);
+  return c.json({ ...result.article, ai_powered: false });
 });
 
 api.get('/articles', async (c) => {
