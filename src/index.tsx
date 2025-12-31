@@ -642,7 +642,7 @@ app.get('/demo', (c) => {
     <div id="dashboard" class="hidden">
       <!-- Sidebar -->
       <aside class="sidebar fixed left-0 top-0 bg-gray-900 text-white p-6">
-        <div class="flex items-center gap-3 mb-8">
+        <a href="/" class="flex items-center gap-3 mb-8 hover:opacity-80 transition">
           <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
             <i class="fas fa-rocket"></i>
           </div>
@@ -650,9 +650,12 @@ app.get('/demo', (c) => {
             <h1 class="font-bold text-lg">AutoBlog</h1>
             <p class="text-xs text-gray-400">Growth Engine</p>
           </div>
-        </div>
+        </a>
 
         <nav class="space-y-2">
+          <a href="/" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
+            <i class="fas fa-home w-5"></i> Home
+          </a>
           <a href="#" onclick="showSection('overview')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-800 text-white">
             <i class="fas fa-chart-line w-5"></i> Overview
           </a>
@@ -1789,7 +1792,7 @@ app.get('/app', (c) => {
     <!-- Dashboard placeholder - will use same structure as demo -->
     <div id="dashboard" class="hidden">
       <aside class="sidebar fixed left-0 top-0 bg-gray-900 text-white p-6">
-        <a href="/" class="flex items-center gap-3 mb-8">
+        <a href="/" class="flex items-center gap-3 mb-8 hover:opacity-80 transition">
           <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
             <i class="fas fa-rocket"></i>
           </div>
@@ -1800,6 +1803,9 @@ app.get('/app', (c) => {
         </a>
 
         <nav class="space-y-2">
+          <a href="/" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
+            <i class="fas fa-home w-5"></i> Home
+          </a>
           <a href="#" onclick="showSection('overview')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-800 text-white">
             <i class="fas fa-chart-line w-5"></i> Overview
           </a>
