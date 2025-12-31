@@ -11,9 +11,5 @@
       "database_name": "autoblog-production",
       "database_id": "placeholder-will-be-replaced-on-deploy"
     }
-  ],
-
-  "vars": {
-    "ANTHROPIC_API_KEY": "REDACTED_API_KEY"
-  }
+  ]
 }
