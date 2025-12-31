@@ -553,93 +553,34 @@ app.get('/demo', (c) => {
     .calendar-drop-zone.drag-over { background-color: #EEF2FF !important; transform: scale(1.02); }
     .drop-hint { animation: hint-pulse 2s infinite; }
     @keyframes hint-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
+    .sidebar { padding-top: 60px !important; }
+    .main-content { padding-top: 60px !important; }
   </style>
 </head>
 <body class="bg-gray-50">
+  <!-- Demo Banner -->
+  <div class="fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-center py-3 px-4">
+    <div class="flex items-center justify-center gap-4 flex-wrap">
+      <span class="flex items-center gap-2">
+        <i class="fas fa-play-circle"></i>
+        <strong>Demo Mode</strong> - Exploring with sample data
+      </span>
+      <a href="/app?register=true" class="px-4 py-1.5 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-gray-100 transition text-sm">
+        Start Free Trial
+      </a>
+      <a href="/" class="text-white/80 hover:text-white text-sm underline">
+        ← Back to Home
+      </a>
+    </div>
+  </div>
+
   <div id="app">
-    <!-- Loading State -->
-    <div id="loading" class="flex items-center justify-center min-h-screen">
-      <div class="text-center">
-        <i class="fas fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
-        <p class="text-gray-600">Loading AutoBlog...</p>
-      </div>
-    </div>
+    <!-- Hidden elements for JS compatibility -->
+    <div id="loading" class="hidden"></div>
+    <div id="auth-screen" class="hidden"></div>
 
-    <!-- Auth Screen -->
-    <div id="auth-screen" class="hidden min-h-screen gradient-bg flex items-center justify-center p-4">
-      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-        <div class="text-center mb-8">
-          <div class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4">
-            <i class="fas fa-rocket text-2xl text-indigo-600"></i>
-          </div>
-          <h1 class="text-2xl font-bold text-gray-900">AutoBlog Growth Engine</h1>
-          <p class="text-gray-500 mt-2">Automated SEO Content for SaaS Startups</p>
-        </div>
-
-        <div id="login-form">
-          <div class="space-y-4">
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" id="login-email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="you@company.com">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input type="password" id="login-password" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="••••••••">
-            </div>
-            <button onclick="handleLogin()" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition">
-              Sign In
-            </button>
-          </div>
-          <p class="text-center mt-6 text-gray-600">
-            Don't have an account? <button onclick="showRegister()" class="text-indigo-600 font-semibold hover:underline">Sign up</button>
-          </p>
-        </div>
-
-        <div id="register-form" class="hidden">
-          <div class="space-y-4">
-            <div class="grid grid-cols-2 gap-4">
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
-                <input type="text" id="reg-name" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="John Doe">
-              </div>
-              <div>
-                <label class="block text-sm font-medium text-gray-700 mb-1">Company</label>
-                <input type="text" id="reg-company" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Acme Inc">
-              </div>
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-              <input type="email" id="reg-email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="you@company.com">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
-              <input type="password" id="reg-password" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="••••••••">
-            </div>
-            <div>
-              <label class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
-              <select id="reg-industry" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
-                <option value="">Select industry...</option>
-                <option value="saas">SaaS / Software</option>
-                <option value="fintech">Fintech</option>
-                <option value="healthtech">Healthtech</option>
-                <option value="ecommerce">E-commerce</option>
-                <option value="martech">Martech</option>
-                <option value="other">Other</option>
-              </select>
-            </div>
-            <button onclick="handleRegister()" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition">
-              Create Account
-            </button>
-          </div>
-          <p class="text-center mt-6 text-gray-600">
-            Already have an account? <button onclick="showLogin()" class="text-indigo-600 font-semibold hover:underline">Sign in</button>
-          </p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Main Dashboard -->
-    <div id="dashboard" class="hidden">
+    <!-- Main Dashboard - Visible by default for demo -->
+    <div id="dashboard" class="pt-12">
       <!-- Sidebar -->
       <aside class="sidebar fixed left-0 top-0 bg-gray-900 text-white p-6">
         <a href="/" class="flex items-center gap-3 mb-8 hover:opacity-80 transition">
@@ -1670,7 +1611,7 @@ app.get('/demo', (c) => {
     </div>
   </div>
 
-  <script src="/static/demo.js"></script>
+  <script src="/static/demo.js?v=${Date.now()}"></script>
 </body>
 </html>`);
 });
@@ -1953,7 +1894,7 @@ app.get('/app', (c) => {
     </div>
   </div>
 
-  <script src="/static/app.js"></script>
+  <script src="/static/app.js?v=${Date.now()}"></script>
 </body>
 </html>`);
 });

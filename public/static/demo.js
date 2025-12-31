@@ -104,52 +104,20 @@ const DEMO_DATA = {
 
 // ==================== INITIALIZATION ====================
 
-document.addEventListener('DOMContentLoaded', () => {
+// Run immediately when script loads (don't wait for DOMContentLoaded)
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initDemo);
+} else {
+  // DOM already loaded
   initDemo();
-});
+}
 
 function initDemo() {
-  // Hide loading, hide auth, show dashboard directly
-  const loading = document.getElementById('loading');
-  const authScreen = document.getElementById('auth-screen');
-  const dashboard = document.getElementById('dashboard');
-  
-  if (loading) loading.classList.add('hidden');
-  if (authScreen) authScreen.classList.add('hidden');
-  if (dashboard) dashboard.classList.remove('hidden');
-  
-  // Show demo banner
-  showDemoBanner();
-  
-  // Load demo data
+  // Load demo data immediately - dashboard is already visible in HTML
   loadDemoDashboard();
 }
 
-function showDemoBanner() {
-  const banner = document.createElement('div');
-  banner.className = 'fixed top-0 left-0 right-0 z-50 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-center py-3 px-4';
-  banner.innerHTML = `
-    <div class="flex items-center justify-center gap-4 flex-wrap">
-      <span class="flex items-center gap-2">
-        <i class="fas fa-play-circle"></i>
-        <strong>Demo Mode</strong> - Exploring with sample data
-      </span>
-      <a href="/app?register=true" class="px-4 py-1.5 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-gray-100 transition text-sm">
-        Start Free Trial
-      </a>
-      <a href="/" class="text-white/80 hover:text-white text-sm underline">
-        ← Back to Home
-      </a>
-    </div>
-  `;
-  document.body.prepend(banner);
-  
-  // Adjust main content
-  const mainContent = document.querySelector('.main-content');
-  if (mainContent) mainContent.style.paddingTop = '60px';
-  const sidebar = document.querySelector('.sidebar');
-  if (sidebar) sidebar.style.paddingTop = '60px';
-}
+// Demo banner is now in HTML
 
 function loadDemoDashboard() {
   // Update stats
