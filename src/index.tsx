@@ -25,6 +25,7 @@ app.get('/', (c) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AutoBlog Growth Engine - AI-Powered SEO Content for SaaS</title>
   <meta name="description" content="Generate SEO-optimized blog content automatically. AI-powered keyword research, article generation, and publishing for SaaS startups.">
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
   <style>
@@ -533,6 +534,7 @@ app.get('/demo', (c) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AutoBlog Growth Engine - Automated SEO Blog Marketing for SaaS</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -1624,6 +1626,7 @@ app.get('/app', (c) => {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>AutoBlog Growth Engine - Dashboard</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
