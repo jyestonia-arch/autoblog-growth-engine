@@ -4,6 +4,8 @@ export interface Bindings {
   DB: D1Database;
   ANTHROPIC_API_KEY?: string;
   RESEND_API_KEY?: string;
+  GSC_CLIENT_ID?: string;
+  GSC_CLIENT_SECRET?: string;
 }
 
 // Organization & User Types

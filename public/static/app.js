@@ -622,8 +622,9 @@ async function loadSEOHealth() {
   const health = await apiCall('/analytics/seo-health');
   if (health.error) return;
 
-  // Also load notification status
+  // Also load notification status and GSC status
   loadNotificationStatus();
+  loadGSCStatus();
 
   // Update health score circle
   const score = health.overallScore || 0;
@@ -697,6 +698,146 @@ function getStatusColor(status) {
     skipped: 'bg-red-100 text-red-700',
   };
   return colors[status] || 'bg-gray-100 text-gray-700';
+}
+
+// ==================== GOOGLE SEARCH CONSOLE ====================
+
+async function loadGSCStatus() {
+  const status = await apiCall('/gsc/status');
+  
+  const statusEl = document.getElementById('gsc-status');
+  const notConnectedEl = document.getElementById('gsc-not-connected');
+  const connectedEl = document.getElementById('gsc-connected');
+  const notConfiguredEl = document.getElementById('gsc-not-configured');
+  
+  // Hide all states
+  notConnectedEl?.classList.add('hidden');
+  connectedEl?.classList.add('hidden');
+  notConfiguredEl?.classList.add('hidden');
+  
+  if (status.error) {
+    statusEl.textContent = 'Error';
+    statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-600';
+    return;
+  }
+  
+  if (!status.gsc_configured) {
+    statusEl.innerHTML = '<i class="fas fa-cog mr-1"></i>Not Configured';
+    statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-600';
+    notConfiguredEl?.classList.remove('hidden');
+    return;
+  }
+  
+  if (!status.connected) {
+    statusEl.innerHTML = '<i class="fas fa-unlink mr-1"></i>Not Connected';
+    statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600';
+    notConnectedEl?.classList.remove('hidden');
+    return;
+  }
+  
+  // Connected
+  statusEl.innerHTML = '<i class="fas fa-check-circle mr-1"></i>Connected';
+  statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-600';
+  connectedEl?.classList.remove('hidden');
+  
+  // Update connection info
+  document.getElementById('gsc-site-url').textContent = status.connection.site_url;
+  document.getElementById('gsc-last-sync').textContent = status.connection.last_sync_at 
+    ? formatDate(status.connection.last_sync_at) 
+    : 'Never';
+  
+  // Update metrics if available
+  if (status.latest_metrics) {
+    document.getElementById('gsc-clicks').textContent = formatNumber(status.latest_metrics.total_clicks || 0);
+    document.getElementById('gsc-impressions').textContent = formatNumber(status.latest_metrics.total_impressions || 0);
+    document.getElementById('gsc-ctr').textContent = `${(status.latest_metrics.avg_ctr || 0).toFixed(1)}%`;
+    document.getElementById('gsc-position').textContent = status.latest_metrics.avg_position 
+      ? Math.round(status.latest_metrics.avg_position) 
+      : '-';
+  }
+  
+  // Load fresh performance data
+  loadGSCPerformance();
+}
+
+async function loadGSCPerformance() {
+  const performance = await apiCall('/gsc/performance?days=30');
+  if (performance.error) return;
+  
+  document.getElementById('gsc-clicks').textContent = formatNumber(performance.totalClicks || 0);
+  document.getElementById('gsc-impressions').textContent = formatNumber(performance.totalImpressions || 0);
+  document.getElementById('gsc-ctr').textContent = `${(performance.avgCtr || 0).toFixed(1)}%`;
+  document.getElementById('gsc-position').textContent = performance.avgPosition 
+    ? Math.round(performance.avgPosition) 
+    : '-';
+  
+  // Update main analytics with GSC data
+  document.getElementById('total-impressions').textContent = formatNumber(performance.totalImpressions || 0);
+  document.getElementById('total-clicks').textContent = formatNumber(performance.totalClicks || 0);
+  document.getElementById('avg-ctr').textContent = `${(performance.avgCtr || 0).toFixed(1)}%`;
+  document.getElementById('avg-position').textContent = performance.avgPosition 
+    ? Math.round(performance.avgPosition) 
+    : '-';
+}
+
+async function connectGSC() {
+  const btn = document.getElementById('gsc-connect-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Loading...';
+  
+  const res = await apiCall('/gsc/auth-url');
+  
+  if (res.error) {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fab fa-google mr-2"></i>Connect Google Search Console';
+    showToast(res.error, 'error');
+    return;
+  }
+  
+  // Open OAuth popup
+  const popup = window.open(res.auth_url, 'gsc_auth', 'width=600,height=700,scrollbars=yes');
+  
+  // Listen for completion message
+  window.addEventListener('message', function handler(event) {
+    if (event.data?.type === 'gsc_connected') {
+      window.removeEventListener('message', handler);
+      popup?.close();
+      showToast(`Connected to ${event.data.siteUrl}`, 'success');
+      loadGSCStatus();
+    }
+  });
+  
+  // Reset button after timeout
+  setTimeout(() => {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fab fa-google mr-2"></i>Connect Google Search Console';
+  }, 5000);
+}
+
+async function syncGSC() {
+  const res = await apiCall('/gsc/sync', { method: 'POST' });
+  
+  if (res.error) {
+    showToast(res.error, 'error');
+    return;
+  }
+  
+  showToast(`Synced! ${res.articlesUpdated} articles updated.`, 'success');
+  loadGSCStatus();
+}
+
+async function disconnectGSC() {
+  if (!confirm('Are you sure you want to disconnect Google Search Console?')) return;
+  
+  const res = await apiCall('/gsc/disconnect', { method: 'POST' });
+  
+  if (res.error) {
+    showToast(res.error, 'error');
+    return;
+  }
+  
+  showToast('GSC disconnected', 'success');
+  loadGSCStatus();
 }
 
 // ==================== EMAIL NOTIFICATIONS ====================

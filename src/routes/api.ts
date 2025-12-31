@@ -10,6 +10,17 @@ import { testWordPressConnection, fullPublishWorkflow } from '../services/wordpr
 import { getSEOHealthReport, getArticlePerformance } from '../services/seo-tracker';
 import { generateKeywordsWithClaude, generateArticleWithClaude, generateLinkSuggestionsWithClaude } from '../services/claude-api';
 import { sendArticlePublishedEmail, sendArticleScheduledEmail, sendUsageLimitWarningEmail } from '../services/email-service';
+import { 
+  fetchSitePerformance, 
+  fetchUrlPerformance, 
+  syncGSCData, 
+  generateGSCAuthUrl, 
+  exchangeCodeForTokens,
+  getVerifiedSites,
+  requestIndexing,
+  getSitemaps,
+  submitSitemap
+} from '../services/google-search-console';
 import type { Bindings, Organization, User, Website, Keyword, Article, KeywordCluster, PLAN_CONFIGS } from '../types';
 
 const api = new Hono<{ Bindings: Bindings }>();
@@ -820,6 +831,378 @@ api.post('/notifications/test', async (c) => {
   } else {
     return c.json({ error: result.error || 'Failed to send test email' }, 500);
   }
+});
+
+// ==================== GOOGLE SEARCH CONSOLE ROUTES ====================
+
+api.get('/gsc/status', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  // Check if GSC is configured
+  const gscConfigured = !!(c.env.GSC_CLIENT_ID && c.env.GSC_CLIENT_SECRET);
+
+  // Check if org has GSC connection
+  const connection = await c.env.DB.prepare(
+    `SELECT * FROM gsc_connections WHERE org_id = ? LIMIT 1`
+  ).bind(auth.org.id).first();
+
+  // Get latest metrics
+  let latestMetrics = null;
+  if (connection) {
+    latestMetrics = await c.env.DB.prepare(
+      `SELECT * FROM gsc_site_metrics WHERE org_id = ? ORDER BY date DESC LIMIT 1`
+    ).bind(auth.org.id).first();
+  }
+
+  return c.json({
+    gsc_configured: gscConfigured,
+    connected: !!connection,
+    connection: connection ? {
+      site_url: (connection as any).site_url,
+      last_sync_at: (connection as any).last_sync_at,
+      sync_enabled: !!(connection as any).sync_enabled,
+    } : null,
+    latest_metrics: latestMetrics,
+  });
+});
+
+api.get('/gsc/auth-url', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.GSC_CLIENT_ID) {
+    return c.json({ error: 'Google Search Console not configured. GSC_CLIENT_ID is required.' }, 400);
+  }
+
+  // Get the current URL to build redirect URI
+  const url = new URL(c.req.url);
+  const redirectUri = `${url.protocol}//${url.host}/api/gsc/callback`;
+
+  // Generate state token for security
+  const state = `${auth.org.id}:${Date.now()}`;
+
+  const authUrl = generateGSCAuthUrl(c.env.GSC_CLIENT_ID, redirectUri, state);
+
+  return c.json({ auth_url: authUrl, redirect_uri: redirectUri });
+});
+
+api.get('/gsc/callback', async (c) => {
+  const code = c.req.query('code');
+  const state = c.req.query('state');
+  const error = c.req.query('error');
+
+  if (error) {
+    return c.html(`
+      <html>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+          <h1>❌ Connection Failed</h1>
+          <p>Error: ${error}</p>
+          <p><a href="/">Return to Dashboard</a></p>
+        </body>
+      </html>
+    `);
+  }
+
+  if (!code || !state) {
+    return c.html(`
+      <html>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+          <h1>❌ Invalid Request</h1>
+          <p>Missing authorization code or state</p>
+          <p><a href="/">Return to Dashboard</a></p>
+        </body>
+      </html>
+    `);
+  }
+
+  if (!c.env.GSC_CLIENT_ID || !c.env.GSC_CLIENT_SECRET) {
+    return c.html(`
+      <html>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+          <h1>❌ Configuration Error</h1>
+          <p>GSC credentials not configured</p>
+          <p><a href="/">Return to Dashboard</a></p>
+        </body>
+      </html>
+    `);
+  }
+
+  try {
+    const [orgId] = state.split(':');
+
+    const url = new URL(c.req.url);
+    const redirectUri = `${url.protocol}//${url.host}/api/gsc/callback`;
+
+    // Exchange code for tokens
+    const tokens = await exchangeCodeForTokens(
+      c.env.GSC_CLIENT_ID,
+      c.env.GSC_CLIENT_SECRET,
+      code,
+      redirectUri
+    );
+
+    // Get verified sites
+    const sites = await getVerifiedSites({
+      clientId: c.env.GSC_CLIENT_ID,
+      clientSecret: c.env.GSC_CLIENT_SECRET,
+      refreshToken: tokens.refreshToken,
+    });
+
+    if (sites.length === 0) {
+      return c.html(`
+        <html>
+          <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+            <h1>⚠️ No Verified Sites</h1>
+            <p>No verified sites found in your Google Search Console account.</p>
+            <p>Please verify your site in GSC first.</p>
+            <p><a href="/">Return to Dashboard</a></p>
+          </body>
+        </html>
+      `);
+    }
+
+    // Store connection for first site (could show selector UI)
+    const siteUrl = sites[0].siteUrl;
+    const connectionId = crypto.randomUUID();
+
+    await c.env.DB.prepare(
+      `INSERT OR REPLACE INTO gsc_connections (id, org_id, site_url, refresh_token_encrypted, permission_level)
+       VALUES (?, ?, ?, ?, ?)`
+    ).bind(connectionId, orgId, siteUrl, tokens.refreshToken, sites[0].permissionLevel).run();
+
+    return c.html(`
+      <html>
+        <head>
+          <script>
+            setTimeout(() => {
+              window.opener?.postMessage({ type: 'gsc_connected', siteUrl: '${siteUrl}' }, '*');
+              window.close();
+            }, 2000);
+          </script>
+        </head>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+          <h1>✅ Connected Successfully!</h1>
+          <p>Site: ${siteUrl}</p>
+          <p>This window will close automatically...</p>
+        </body>
+      </html>
+    `);
+  } catch (e: any) {
+    return c.html(`
+      <html>
+        <body style="font-family: sans-serif; text-align: center; padding: 50px;">
+          <h1>❌ Connection Failed</h1>
+          <p>Error: ${e.message}</p>
+          <p><a href="/">Return to Dashboard</a></p>
+        </body>
+      </html>
+    `);
+  }
+});
+
+api.post('/gsc/sync', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.GSC_CLIENT_ID || !c.env.GSC_CLIENT_SECRET) {
+    return c.json({ error: 'GSC not configured' }, 400);
+  }
+
+  // Get connection
+  const connection = await c.env.DB.prepare(
+    `SELECT * FROM gsc_connections WHERE org_id = ?`
+  ).bind(auth.org.id).first() as any;
+
+  if (!connection) {
+    return c.json({ error: 'GSC not connected' }, 400);
+  }
+
+  // Sync data
+  const result = await syncGSCData(
+    c.env.DB,
+    {
+      clientId: c.env.GSC_CLIENT_ID,
+      clientSecret: c.env.GSC_CLIENT_SECRET,
+      refreshToken: connection.refresh_token_encrypted,
+    },
+    auth.org.id,
+    connection.site_url
+  );
+
+  if (result.success) {
+    // Update last sync time
+    await c.env.DB.prepare(
+      `UPDATE gsc_connections SET last_sync_at = datetime('now') WHERE org_id = ?`
+    ).bind(auth.org.id).run();
+  }
+
+  return c.json(result);
+});
+
+api.get('/gsc/performance', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.GSC_CLIENT_ID || !c.env.GSC_CLIENT_SECRET) {
+    return c.json({ error: 'GSC not configured' }, 400);
+  }
+
+  const connection = await c.env.DB.prepare(
+    `SELECT * FROM gsc_connections WHERE org_id = ?`
+  ).bind(auth.org.id).first() as any;
+
+  if (!connection) {
+    return c.json({ error: 'GSC not connected' }, 400);
+  }
+
+  const days = parseInt(c.req.query('days') || '30');
+  const endDate = new Date().toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  try {
+    const performance = await fetchSitePerformance(
+      {
+        clientId: c.env.GSC_CLIENT_ID,
+        clientSecret: c.env.GSC_CLIENT_SECRET,
+        refreshToken: connection.refresh_token_encrypted,
+      },
+      connection.site_url,
+      startDate,
+      endDate
+    );
+
+    return c.json(performance);
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+api.get('/gsc/articles/:id/performance', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.GSC_CLIENT_ID || !c.env.GSC_CLIENT_SECRET) {
+    return c.json({ error: 'GSC not configured' }, 400);
+  }
+
+  const articleId = c.req.param('id');
+
+  // Get article
+  const article = await c.env.DB.prepare(
+    `SELECT published_url FROM articles WHERE id = ? AND org_id = ?`
+  ).bind(articleId, auth.org.id).first() as any;
+
+  if (!article?.published_url) {
+    return c.json({ error: 'Article not found or not published' }, 404);
+  }
+
+  const connection = await c.env.DB.prepare(
+    `SELECT * FROM gsc_connections WHERE org_id = ?`
+  ).bind(auth.org.id).first() as any;
+
+  if (!connection) {
+    return c.json({ error: 'GSC not connected' }, 400);
+  }
+
+  const days = parseInt(c.req.query('days') || '30');
+  const endDate = new Date().toISOString().split('T')[0];
+  const startDate = new Date(Date.now() - days * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+  try {
+    const performance = await fetchUrlPerformance(
+      {
+        clientId: c.env.GSC_CLIENT_ID,
+        clientSecret: c.env.GSC_CLIENT_SECRET,
+        refreshToken: connection.refresh_token_encrypted,
+      },
+      connection.site_url,
+      article.published_url,
+      startDate,
+      endDate
+    );
+
+    return c.json(performance);
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+api.post('/gsc/request-indexing', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.GSC_CLIENT_ID || !c.env.GSC_CLIENT_SECRET) {
+    return c.json({ error: 'GSC not configured' }, 400);
+  }
+
+  const { url } = await c.req.json();
+
+  if (!url) {
+    return c.json({ error: 'URL is required' }, 400);
+  }
+
+  const connection = await c.env.DB.prepare(
+    `SELECT * FROM gsc_connections WHERE org_id = ?`
+  ).bind(auth.org.id).first() as any;
+
+  if (!connection) {
+    return c.json({ error: 'GSC not connected' }, 400);
+  }
+
+  const result = await requestIndexing(
+    {
+      clientId: c.env.GSC_CLIENT_ID,
+      clientSecret: c.env.GSC_CLIENT_SECRET,
+      refreshToken: connection.refresh_token_encrypted,
+    },
+    url
+  );
+
+  return c.json(result);
+});
+
+api.get('/gsc/sitemaps', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.GSC_CLIENT_ID || !c.env.GSC_CLIENT_SECRET) {
+    return c.json({ error: 'GSC not configured' }, 400);
+  }
+
+  const connection = await c.env.DB.prepare(
+    `SELECT * FROM gsc_connections WHERE org_id = ?`
+  ).bind(auth.org.id).first() as any;
+
+  if (!connection) {
+    return c.json({ error: 'GSC not connected' }, 400);
+  }
+
+  try {
+    const sitemaps = await getSitemaps(
+      {
+        clientId: c.env.GSC_CLIENT_ID,
+        clientSecret: c.env.GSC_CLIENT_SECRET,
+        refreshToken: connection.refresh_token_encrypted,
+      },
+      connection.site_url
+    );
+
+    return c.json(sitemaps);
+  } catch (e: any) {
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+api.post('/gsc/disconnect', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  await c.env.DB.prepare(
+    `DELETE FROM gsc_connections WHERE org_id = ?`
+  ).bind(auth.org.id).run();
+
+  return c.json({ success: true });
 });
 
 export default api;

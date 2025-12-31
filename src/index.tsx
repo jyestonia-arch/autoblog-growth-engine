@@ -504,6 +504,85 @@ app.get('/', (c) => {
             <p class="text-gray-500">Track your organic growth performance</p>
           </div>
 
+          <!-- Google Search Console Connection -->
+          <div class="bg-white rounded-xl p-6 shadow-sm mb-8">
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <i class="fab fa-google text-blue-600"></i>
+                </div>
+                <div>
+                  <h3 class="font-semibold text-gray-900">Google Search Console</h3>
+                  <p class="text-sm text-gray-500">Connect for real search performance data</p>
+                </div>
+              </div>
+              <span id="gsc-status" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                Checking...
+              </span>
+            </div>
+
+            <div id="gsc-not-connected" class="hidden">
+              <div class="bg-blue-50 rounded-lg p-4 mb-4">
+                <p class="text-sm text-blue-800">
+                  <i class="fas fa-info-circle mr-2"></i>
+                  Connect your Google Search Console to see real clicks, impressions, and keyword rankings.
+                </p>
+              </div>
+              <button onclick="connectGSC()" id="gsc-connect-btn" class="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition">
+                <i class="fab fa-google mr-2"></i>Connect Google Search Console
+              </button>
+            </div>
+
+            <div id="gsc-connected" class="hidden">
+              <div class="flex items-center justify-between p-4 bg-green-50 rounded-lg mb-4">
+                <div class="flex items-center gap-3">
+                  <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                  <div>
+                    <p class="font-medium text-gray-900" id="gsc-site-url">Connected</p>
+                    <p class="text-sm text-gray-500">Last sync: <span id="gsc-last-sync">Never</span></p>
+                  </div>
+                </div>
+                <div class="flex gap-2">
+                  <button onclick="syncGSC()" class="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition">
+                    <i class="fas fa-sync-alt mr-2"></i>Sync Now
+                  </button>
+                  <button onclick="disconnectGSC()" class="px-4 py-2 border border-red-300 text-red-600 rounded-lg hover:bg-red-50 transition">
+                    Disconnect
+                  </button>
+                </div>
+              </div>
+
+              <!-- GSC Real-time Stats -->
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-gray-50 p-4 rounded-lg text-center">
+                  <p class="text-2xl font-bold text-indigo-600" id="gsc-clicks">0</p>
+                  <p class="text-sm text-gray-500">Clicks (30d)</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg text-center">
+                  <p class="text-2xl font-bold text-blue-600" id="gsc-impressions">0</p>
+                  <p class="text-sm text-gray-500">Impressions</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg text-center">
+                  <p class="text-2xl font-bold text-green-600" id="gsc-ctr">0%</p>
+                  <p class="text-sm text-gray-500">Avg CTR</p>
+                </div>
+                <div class="bg-gray-50 p-4 rounded-lg text-center">
+                  <p class="text-2xl font-bold text-orange-600" id="gsc-position">-</p>
+                  <p class="text-sm text-gray-500">Avg Position</p>
+                </div>
+              </div>
+            </div>
+
+            <div id="gsc-not-configured" class="hidden">
+              <div class="bg-yellow-50 rounded-lg p-4">
+                <p class="text-sm text-yellow-800">
+                  <i class="fas fa-exclamation-triangle mr-2"></i>
+                  GSC integration requires configuration. Set <code class="bg-yellow-100 px-1 rounded">GSC_CLIENT_ID</code> and <code class="bg-yellow-100 px-1 rounded">GSC_CLIENT_SECRET</code> environment variables.
+                </p>
+              </div>
+            </div>
+          </div>
+
           <!-- SEO Health Score -->
           <div class="bg-white rounded-xl p-6 shadow-sm mb-8">
             <div class="flex items-center justify-between mb-6">

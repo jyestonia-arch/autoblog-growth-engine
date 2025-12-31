@@ -9,3 +9,11 @@ ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxx
 # Get your key from: https://resend.com/api-keys
 # Free tier: 100 emails/day, 3,000 emails/month
 RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx
+
+# Google Search Console API (for real SEO data)
+# Setup guide: https://console.cloud.google.com/apis/credentials
+# 1. Create OAuth 2.0 Client ID (Web application)
+# 2. Add authorized redirect URI: YOUR_DOMAIN/api/gsc/callback
+# 3. Enable Search Console API and Indexing API
+GSC_CLIENT_ID=xxxxxxxxxxxxxxxxxxxxx.apps.googleusercontent.com
+GSC_CLIENT_SECRET=GOCSPX-xxxxxxxxxxxxxxxxxxxxx
