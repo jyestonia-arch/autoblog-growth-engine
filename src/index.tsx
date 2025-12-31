@@ -36,6 +36,14 @@ app.get('/', (c) => {
     .sidebar { width: 260px; min-height: 100vh; }
     .main-content { margin-left: 260px; }
     @media (max-width: 1024px) { .sidebar { display: none; } .main-content { margin-left: 0; } }
+    
+    /* Drag and Drop Styles */
+    .draggable-article { touch-action: none; user-select: none; }
+    .draggable-article:active { cursor: grabbing; }
+    .calendar-drop-zone { transition: all 0.2s ease; }
+    .calendar-drop-zone.drag-over { background-color: #EEF2FF !important; transform: scale(1.02); }
+    .drop-hint { animation: hint-pulse 2s infinite; }
+    @keyframes hint-pulse { 0%, 100% { opacity: 0.6; } 50% { opacity: 1; } }
   </style>
 </head>
 <body class="bg-gray-50">
@@ -616,6 +624,19 @@ app.get('/', (c) => {
             </div>
           </div>
 
+          <!-- Drag & Drop Instructions -->
+          <div class="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 mb-6 border border-indigo-100">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center">
+                <i class="fas fa-hand-pointer text-indigo-600"></i>
+              </div>
+              <div>
+                <p class="font-medium text-gray-900">Drag & Drop Scheduling</p>
+                <p class="text-sm text-gray-600">Drag articles from the panels below and drop them onto calendar dates to schedule instantly.</p>
+              </div>
+            </div>
+          </div>
+
           <!-- Upcoming Content -->
           <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <!-- Scheduled Articles -->
@@ -626,6 +647,7 @@ app.get('/', (c) => {
                 </h3>
                 <span id="scheduled-count" class="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full">0</span>
               </div>
+              <p class="text-xs text-gray-500 mb-3"><i class="fas fa-arrows-alt mr-1"></i>Drag to reschedule</p>
               <div id="scheduled-articles" class="space-y-3 max-h-80 overflow-y-auto">
                 <p class="text-gray-500 text-sm text-center py-4">No scheduled articles</p>
               </div>
@@ -639,6 +661,7 @@ app.get('/', (c) => {
                 </h3>
                 <span id="draft-count" class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded-full">0</span>
               </div>
+              <p class="text-xs text-indigo-600 mb-3"><i class="fas fa-arrows-alt mr-1"></i>Drag to calendar to schedule</p>
               <div id="draft-articles" class="space-y-3 max-h-80 overflow-y-auto">
                 <p class="text-gray-500 text-sm text-center py-4">No draft articles</p>
               </div>

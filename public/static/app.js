@@ -701,6 +701,7 @@ function getStatusColor(status) {
 let calendarDate = new Date();
 let calendarView = 'month';
 let calendarArticles = [];
+let draggedArticle = null; // For drag and drop
 
 async function loadCalendar() {
   // Load all articles for calendar
@@ -789,13 +790,21 @@ function renderMonthView() {
       return articleDate.split('T')[0] === dateStr;
     });
     
+    // Add calendar-drop-zone class for drag & drop (only for future/today dates)
+    const dropZoneClass = !isPast ? 'calendar-drop-zone' : '';
+    
     html += `
-      <div class="min-h-24 p-2 ${isToday ? 'bg-indigo-50 ring-2 ring-indigo-500' : isPast ? 'bg-gray-50' : 'bg-white'} rounded-lg border border-gray-100 hover:border-indigo-300 transition cursor-pointer" onclick="openDayView('${dateStr}')">
+      <div class="min-h-24 p-2 ${isToday ? 'bg-indigo-50 ring-2 ring-indigo-500' : isPast ? 'bg-gray-50' : 'bg-white'} rounded-lg border border-gray-100 hover:border-indigo-300 transition cursor-pointer ${dropZoneClass}"
+           onclick="openDayView('${dateStr}')"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event, '${dateStr}')"
+           data-date="${dateStr}">
         <div class="flex justify-between items-start mb-1">
           <span class="text-sm font-medium ${isToday ? 'text-indigo-600' : isPast ? 'text-gray-400' : 'text-gray-900'}">${day}</span>
           ${dayArticles.length > 0 ? `<span class="w-2 h-2 bg-indigo-500 rounded-full"></span>` : ''}
         </div>
-        <div class="space-y-1">
+        <div class="space-y-1 pointer-events-none">
           ${dayArticles.slice(0, 2).map(a => `
             <div class="text-xs p-1 rounded truncate ${a.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}">
               ${escapeHtml(a.title.substring(0, 20))}${a.title.length > 20 ? '...' : ''}
@@ -823,6 +832,7 @@ function renderWeekView() {
     date.setDate(date.getDate() + i);
     const dateStr = date.toISOString().split('T')[0];
     const isToday = date.getTime() === today.getTime();
+    const isPast = date < today;
     const dayName = date.toLocaleDateString('en-US', { weekday: 'short' });
     const dayNum = date.getDate();
     
@@ -833,27 +843,47 @@ function renderWeekView() {
       return articleDate.split('T')[0] === dateStr;
     });
     
+    // Add calendar-drop-zone class for drag & drop (only for future/today dates)
+    const dropZoneClass = !isPast ? 'calendar-drop-zone' : '';
+    
     html += `
-      <div class="flex gap-4 p-4 ${isToday ? 'bg-indigo-50' : 'bg-white'} rounded-lg border border-gray-100">
+      <div class="flex gap-4 p-4 ${isToday ? 'bg-indigo-50' : 'bg-white'} rounded-lg border border-gray-100 ${dropZoneClass}"
+           ondragover="handleDragOver(event)"
+           ondragleave="handleDragLeave(event)"
+           ondrop="handleDrop(event, '${dateStr}')"
+           data-date="${dateStr}">
         <div class="w-16 text-center">
           <div class="text-sm text-gray-500">${dayName}</div>
           <div class="text-2xl font-bold ${isToday ? 'text-indigo-600' : 'text-gray-900'}">${dayNum}</div>
         </div>
         <div class="flex-1 space-y-2">
           ${dayArticles.length === 0 ? `
-            <div class="text-sm text-gray-400 py-2">No content scheduled</div>
+            <div class="text-sm text-gray-400 py-2 ${!isPast ? 'drop-hint' : ''}">
+              ${!isPast ? '<i class="fas fa-hand-point-left mr-1"></i>Drop article here or ' : ''}No content scheduled
+            </div>
           ` : dayArticles.map(a => `
-            <div class="flex items-center justify-between p-3 ${a.status === 'published' ? 'bg-green-50' : 'bg-yellow-50'} rounded-lg">
-              <div>
-                <p class="font-medium text-gray-900">${escapeHtml(a.title)}</p>
-                <p class="text-sm text-gray-500">${a.status === 'published' ? 'Published' : 'Scheduled'}</p>
+            <div class="flex items-center justify-between p-3 ${a.status === 'published' ? 'bg-green-50' : 'bg-yellow-50'} rounded-lg draggable-article cursor-move"
+                 draggable="${a.status !== 'published'}"
+                 data-article-id="${a.id}"
+                 data-article-title="${escapeHtml(a.title)}"
+                 data-article-status="${a.status}"
+                 ondragstart="handleDragStart(event)"
+                 ondragend="handleDragEnd(event)">
+              <div class="flex items-center gap-2">
+                ${a.status !== 'published' ? '<i class="fas fa-grip-vertical text-gray-400 text-xs"></i>' : ''}
+                <div>
+                  <p class="font-medium text-gray-900">${escapeHtml(a.title)}</p>
+                  <p class="text-sm text-gray-500">${a.status === 'published' ? 'Published' : 'Scheduled - drag to reschedule'}</p>
+                </div>
               </div>
               <span class="px-2 py-1 text-xs font-medium rounded-full ${getStatusColor(a.status)}">${a.status}</span>
             </div>
           `).join('')}
-          <button onclick="openScheduleModal('${dateStr}')" class="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-indigo-500 hover:text-indigo-600 transition text-sm">
-            <i class="fas fa-plus mr-1"></i> Add Content
-          </button>
+          ${!isPast ? `
+            <button onclick="openScheduleModal('${dateStr}')" class="w-full py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-indigo-500 hover:text-indigo-600 transition text-sm">
+              <i class="fas fa-plus mr-1"></i> Add Content
+            </button>
+          ` : ''}
         </div>
       </div>
     `;
@@ -863,32 +893,54 @@ function renderWeekView() {
 }
 
 async function loadCalendarSidebar() {
-  // Scheduled articles
+  // Scheduled articles - draggable to reschedule
   const scheduled = calendarArticles.filter(a => a.status === 'scheduled');
   const scheduledContainer = document.getElementById('scheduled-articles');
   document.getElementById('scheduled-count').textContent = scheduled.length;
   
   if (scheduled.length > 0) {
     scheduledContainer.innerHTML = scheduled.map(a => `
-      <div class="p-3 bg-yellow-50 rounded-lg">
-        <p class="font-medium text-gray-900 text-sm truncate">${escapeHtml(a.title)}</p>
-        <p class="text-xs text-gray-500 mt-1"><i class="fas fa-calendar mr-1"></i>${formatDate(a.scheduled_at)}</p>
+      <div class="p-3 bg-yellow-50 rounded-lg cursor-move draggable-article hover:ring-2 hover:ring-yellow-400 transition"
+           draggable="true"
+           data-article-id="${a.id}"
+           data-article-title="${escapeHtml(a.title)}"
+           data-article-status="scheduled"
+           ondragstart="handleDragStart(event)"
+           ondragend="handleDragEnd(event)">
+        <div class="flex items-center gap-2">
+          <i class="fas fa-grip-vertical text-yellow-400 text-xs"></i>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-gray-900 text-sm truncate">${escapeHtml(a.title)}</p>
+            <p class="text-xs text-gray-500 mt-1"><i class="fas fa-calendar mr-1"></i>${formatDate(a.scheduled_at)}</p>
+          </div>
+        </div>
       </div>
     `).join('');
   } else {
     scheduledContainer.innerHTML = '<p class="text-gray-500 text-sm text-center py-4">No scheduled articles</p>';
   }
   
-  // Draft articles
+  // Draft articles - draggable to schedule
   const drafts = calendarArticles.filter(a => a.status === 'draft');
   const draftContainer = document.getElementById('draft-articles');
   document.getElementById('draft-count').textContent = drafts.length;
   
   if (drafts.length > 0) {
     draftContainer.innerHTML = drafts.map(a => `
-      <div class="p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-gray-100" onclick="openScheduleModalForArticle('${a.id}')">
-        <p class="font-medium text-gray-900 text-sm truncate">${escapeHtml(a.title)}</p>
-        <p class="text-xs text-gray-500 mt-1"><i class="fas fa-edit mr-1"></i>Click to schedule</p>
+      <div class="p-3 bg-gray-50 rounded-lg cursor-move draggable-article hover:ring-2 hover:ring-indigo-400 transition"
+           draggable="true"
+           data-article-id="${a.id}"
+           data-article-title="${escapeHtml(a.title)}"
+           data-article-status="draft"
+           ondragstart="handleDragStart(event)"
+           ondragend="handleDragEnd(event)">
+        <div class="flex items-center gap-2">
+          <i class="fas fa-grip-vertical text-gray-400 text-xs"></i>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-gray-900 text-sm truncate">${escapeHtml(a.title)}</p>
+            <p class="text-xs text-indigo-500 mt-1"><i class="fas fa-arrows-alt mr-1"></i>Drag to schedule</p>
+          </div>
+        </div>
       </div>
     `).join('');
   } else {
@@ -968,6 +1020,149 @@ async function confirmSchedule() {
   closeScheduleModal();
   loadCalendar();
   alert('Article scheduled successfully!');
+}
+
+// ==================== DRAG AND DROP ====================
+
+function handleDragStart(event) {
+  const target = event.target.closest('.draggable-article');
+  if (!target) return;
+  
+  draggedArticle = {
+    id: target.dataset.articleId,
+    title: target.dataset.articleTitle,
+    status: target.dataset.articleStatus
+  };
+  
+  // Visual feedback
+  target.classList.add('opacity-50', 'scale-95');
+  event.dataTransfer.effectAllowed = 'move';
+  event.dataTransfer.setData('text/plain', draggedArticle.id);
+  
+  // Add drop zones highlight to calendar
+  setTimeout(() => {
+    document.querySelectorAll('.calendar-drop-zone').forEach(zone => {
+      zone.classList.add('ring-2', 'ring-dashed', 'ring-indigo-300');
+    });
+  }, 0);
+}
+
+function handleDragEnd(event) {
+  const target = event.target.closest('.draggable-article');
+  if (target) {
+    target.classList.remove('opacity-50', 'scale-95');
+  }
+  
+  // Remove drop zones highlight
+  document.querySelectorAll('.calendar-drop-zone').forEach(zone => {
+    zone.classList.remove('ring-2', 'ring-dashed', 'ring-indigo-300', 'bg-indigo-100');
+  });
+  
+  draggedArticle = null;
+}
+
+function handleDragOver(event) {
+  event.preventDefault();
+  event.dataTransfer.dropEffect = 'move';
+  
+  const target = event.target.closest('.calendar-drop-zone');
+  if (target) {
+    target.classList.add('bg-indigo-100');
+  }
+}
+
+function handleDragLeave(event) {
+  const target = event.target.closest('.calendar-drop-zone');
+  if (target) {
+    target.classList.remove('bg-indigo-100');
+  }
+}
+
+async function handleDrop(event, dateStr) {
+  event.preventDefault();
+  
+  const target = event.target.closest('.calendar-drop-zone');
+  if (target) {
+    target.classList.remove('bg-indigo-100', 'ring-2', 'ring-dashed', 'ring-indigo-300');
+  }
+  
+  if (!draggedArticle) return;
+  
+  // Schedule the article for this date (default time 09:00)
+  const scheduledAt = `${dateStr}T09:00:00.000Z`;
+  
+  // Show loading indicator
+  showDropFeedback(target, 'loading');
+  
+  const res = await apiCall(`/articles/${draggedArticle.id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ status: 'scheduled', scheduled_at: scheduledAt }),
+  });
+  
+  if (res.error) {
+    showDropFeedback(target, 'error');
+    showToast(`Failed to schedule: ${res.error}`, 'error');
+  } else {
+    showDropFeedback(target, 'success');
+    showToast(`"${draggedArticle.title}" scheduled for ${formatDate(dateStr)}`, 'success');
+    loadCalendar();
+  }
+  
+  draggedArticle = null;
+}
+
+function showDropFeedback(target, type) {
+  if (!target) return;
+  
+  const feedbackClass = {
+    loading: 'bg-blue-100',
+    success: 'bg-green-100',
+    error: 'bg-red-100'
+  }[type];
+  
+  target.classList.add(feedbackClass);
+  setTimeout(() => {
+    target.classList.remove(feedbackClass);
+  }, 500);
+}
+
+function showToast(message, type = 'info') {
+  // Remove existing toasts
+  document.querySelectorAll('.toast-notification').forEach(t => t.remove());
+  
+  const toast = document.createElement('div');
+  toast.className = `toast-notification fixed bottom-4 right-4 px-6 py-4 rounded-lg shadow-lg z-50 flex items-center gap-3 transform transition-all duration-300 translate-y-full opacity-0`;
+  
+  const bgColor = {
+    success: 'bg-green-600',
+    error: 'bg-red-600',
+    info: 'bg-indigo-600'
+  }[type] || 'bg-gray-800';
+  
+  const icon = {
+    success: 'fa-check-circle',
+    error: 'fa-exclamation-circle',
+    info: 'fa-info-circle'
+  }[type] || 'fa-info-circle';
+  
+  toast.classList.add(bgColor, 'text-white');
+  toast.innerHTML = `
+    <i class="fas ${icon}"></i>
+    <span>${escapeHtml(message)}</span>
+  `;
+  
+  document.body.appendChild(toast);
+  
+  // Animate in
+  requestAnimationFrame(() => {
+    toast.classList.remove('translate-y-full', 'opacity-0');
+  });
+  
+  // Remove after 3 seconds
+  setTimeout(() => {
+    toast.classList.add('translate-y-full', 'opacity-0');
+    setTimeout(() => toast.remove(), 300);
+  }, 3000);
 }
 
 // Helper functions
