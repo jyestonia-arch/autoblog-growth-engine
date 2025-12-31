@@ -8,7 +8,17 @@ import { generateArticle, saveArticle } from '../services/article-generator';
 import { analyzeInternalLinks, getArticleLinkSuggestions, applyInternalLinks, getInternalLinkingStats } from '../services/internal-linking';
 import { testWordPressConnection, fullPublishWorkflow } from '../services/wordpress-publisher';
 import { getSEOHealthReport, getArticlePerformance } from '../services/seo-tracker';
-import { generateKeywordsWithClaude, generateArticleWithClaude, generateLinkSuggestionsWithClaude } from '../services/claude-api';
+import { 
+  generateKeywordsWithClaude, 
+  generateArticleWithClaude, 
+  generateLinkSuggestionsWithClaude,
+  generateKeywordsMultilingual,
+  generateArticleMultilingual,
+  translateContent,
+  getSupportedLanguages,
+  SUPPORTED_LANGUAGES,
+  type SupportedLanguage,
+} from '../services/claude-api';
 import { sendArticlePublishedEmail, sendArticleScheduledEmail, sendUsageLimitWarningEmail } from '../services/email-service';
 import { 
   fetchSitePerformance, 
@@ -1622,6 +1632,330 @@ api.get('/billing/config', async (c) => {
       },
     ],
   });
+});
+
+// ==================== MULTILINGUAL ROUTES ====================
+
+api.get('/languages', async (c) => {
+  // Return list of supported languages
+  return c.json({
+    languages: getSupportedLanguages(),
+    default: 'en',
+  });
+});
+
+api.post('/keywords/research/multilingual', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  const apiKey = c.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return c.json({ error: 'Claude API not configured. ANTHROPIC_API_KEY is required.' }, 400);
+  }
+
+  const request = await c.req.json();
+  const language = (request.language || 'en') as SupportedLanguage;
+
+  if (!SUPPORTED_LANGUAGES[language]) {
+    return c.json({ error: `Unsupported language: ${language}` }, 400);
+  }
+
+  try {
+    const result = await generateKeywordsMultilingual(apiKey, {
+      saasDescription: request.saas_description,
+      targetIcp: request.target_icp,
+      industry: request.industry,
+      competitors: request.competitors || [],
+      language,
+    });
+
+    // Save clusters and keywords to database
+    const clusters: any[] = [];
+    const keywords: any[] = [];
+
+    for (const cluster of result.clusters) {
+      const clusterId = generateId();
+      clusters.push({
+        id: clusterId,
+        org_id: auth.org.id,
+        pillar_keyword: cluster.pillarKeyword,
+        cluster_name: cluster.name,
+        description: `${SUPPORTED_LANGUAGES[language].flag} ${SUPPORTED_LANGUAGES[language].nativeName} - ${cluster.funnelStage.toUpperCase()} content cluster`,
+        funnel_stage: cluster.funnelStage,
+        status: 'active',
+        total_keywords: cluster.keywords.length,
+        articles_generated: 0,
+        created_at: new Date().toISOString(),
+      });
+
+      for (const kw of cluster.keywords) {
+        keywords.push({
+          id: generateId(),
+          cluster_id: clusterId,
+          org_id: auth.org.id,
+          keyword: kw.keyword,
+          search_intent: kw.intent,
+          difficulty_score: kw.difficulty,
+          funnel_stage: cluster.funnelStage,
+          monthly_searches: Math.floor(Math.random() * 1000) + 100,
+          priority_score: kw.priority,
+          status: 'pending',
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
+
+    // Save to database
+    for (const cluster of clusters) {
+      await c.env.DB.prepare(
+        `INSERT INTO keyword_clusters (id, org_id, pillar_keyword, cluster_name, description, funnel_stage, status, total_keywords, articles_generated)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        cluster.id, cluster.org_id, cluster.pillar_keyword, cluster.cluster_name,
+        cluster.description, cluster.funnel_stage, cluster.status, cluster.total_keywords, 0
+      ).run();
+    }
+
+    for (const kw of keywords) {
+      await c.env.DB.prepare(
+        `INSERT INTO keywords (id, cluster_id, org_id, keyword, search_intent, difficulty_score, funnel_stage, monthly_searches, priority_score, status)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+      ).bind(
+        kw.id, kw.cluster_id, kw.org_id, kw.keyword, kw.search_intent,
+        kw.difficulty_score, kw.funnel_stage, kw.monthly_searches, kw.priority_score, kw.status
+      ).run();
+    }
+
+    return c.json({
+      clusters,
+      keywords: keywords.slice(0, 20),
+      total_keywords: keywords.length,
+      language: result.language,
+      language_info: SUPPORTED_LANGUAGES[language],
+    });
+  } catch (e: any) {
+    console.error('Multilingual keyword research error:', e.message);
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+api.post('/articles/generate/multilingual', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  const apiKey = c.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return c.json({ error: 'Claude API not configured. ANTHROPIC_API_KEY is required.' }, 400);
+  }
+
+  // Check monthly limit
+  const orgData = await c.env.DB.prepare(
+    `SELECT posts_used_this_month, monthly_post_limit, description, icp, industry FROM organizations WHERE id = ?`
+  ).bind(auth.org.id).first() as any;
+
+  if (orgData.posts_used_this_month >= orgData.monthly_post_limit) {
+    return c.json({ error: 'Monthly post limit reached. Please upgrade your plan.' }, 403);
+  }
+
+  const { keyword_id, language = 'en' } = await c.req.json();
+  const targetLanguage = language as SupportedLanguage;
+
+  if (!SUPPORTED_LANGUAGES[targetLanguage]) {
+    return c.json({ error: `Unsupported language: ${language}` }, 400);
+  }
+
+  // Get keyword
+  const keyword = await c.env.DB.prepare(
+    `SELECT * FROM keywords WHERE id = ? AND org_id = ?`
+  ).bind(keyword_id, auth.org.id).first() as Keyword;
+
+  if (!keyword) return c.json({ error: 'Keyword not found' }, 404);
+
+  try {
+    const claudeResult = await generateArticleMultilingual(apiKey, {
+      keyword: keyword.keyword,
+      searchIntent: keyword.search_intent,
+      funnelStage: keyword.funnel_stage,
+      language: targetLanguage,
+      saasDescription: orgData.description,
+      targetIcp: orgData.icp,
+      industry: orgData.industry,
+    });
+
+    // Create article
+    const article = {
+      id: generateId(),
+      org_id: auth.org.id,
+      website_id: null,
+      keyword_id: keyword.id,
+      cluster_id: keyword.cluster_id,
+      title: claudeResult.title,
+      slug: generateSlug(claudeResult.title),
+      content: claudeResult.content,
+      meta_title: claudeResult.metaTitle,
+      meta_description: claudeResult.metaDescription,
+      excerpt: claudeResult.excerpt,
+      word_count: countWords(claudeResult.content),
+      reading_time: calculateReadingTime(claudeResult.content),
+      featured_image_url: null,
+      categories: [keyword.search_intent],
+      tags: claudeResult.tags,
+      faqs: claudeResult.faqs,
+      status: 'draft',
+      scheduled_at: null,
+      published_at: null,
+      published_url: null,
+      cms_post_id: null,
+      seo_score: calculateSEOScore({
+        title: claudeResult.title,
+        content: claudeResult.content,
+        meta_title: claudeResult.metaTitle,
+        meta_description: claudeResult.metaDescription,
+        faqs: JSON.stringify(claudeResult.faqs),
+      }),
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+
+    // Save article with language tag in title
+    const langInfo = SUPPORTED_LANGUAGES[targetLanguage];
+    
+    await c.env.DB.prepare(
+      `INSERT INTO articles (id, org_id, keyword_id, cluster_id, title, slug, content, meta_title, meta_description, excerpt, word_count, reading_time, categories, tags, faqs, status, seo_score)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      article.id, article.org_id, article.keyword_id, article.cluster_id,
+      `${langInfo.flag} ${article.title}`, article.slug, article.content,
+      article.meta_title, article.meta_description, article.excerpt,
+      article.word_count, article.reading_time,
+      JSON.stringify(article.categories), JSON.stringify(article.tags),
+      JSON.stringify(article.faqs), article.status, article.seo_score
+    ).run();
+
+    // Update keyword status
+    await c.env.DB.prepare(
+      `UPDATE keywords SET status = 'completed' WHERE id = ?`
+    ).bind(keyword_id).run();
+
+    // Increment posts used
+    await c.env.DB.prepare(
+      `UPDATE organizations SET posts_used_this_month = posts_used_this_month + 1 WHERE id = ?`
+    ).bind(auth.org.id).run();
+
+    return c.json({
+      ...article,
+      title: `${langInfo.flag} ${article.title}`,
+      language: targetLanguage,
+      language_info: langInfo,
+    });
+  } catch (e: any) {
+    console.error('Multilingual article generation error:', e.message);
+    return c.json({ error: e.message }, 500);
+  }
+});
+
+api.post('/articles/:id/translate', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  const apiKey = c.env.ANTHROPIC_API_KEY;
+  if (!apiKey) {
+    return c.json({ error: 'Claude API not configured. ANTHROPIC_API_KEY is required.' }, 400);
+  }
+
+  // Check monthly limit
+  const orgData = await c.env.DB.prepare(
+    `SELECT posts_used_this_month, monthly_post_limit FROM organizations WHERE id = ?`
+  ).bind(auth.org.id).first() as any;
+
+  if (orgData.posts_used_this_month >= orgData.monthly_post_limit) {
+    return c.json({ error: 'Monthly post limit reached. Please upgrade your plan.' }, 403);
+  }
+
+  const articleId = c.req.param('id');
+  const { target_language, source_language = 'en' } = await c.req.json();
+
+  if (!target_language || !SUPPORTED_LANGUAGES[target_language as SupportedLanguage]) {
+    return c.json({ error: 'Invalid target language' }, 400);
+  }
+
+  // Get original article
+  const originalArticle = await c.env.DB.prepare(
+    `SELECT * FROM articles WHERE id = ? AND org_id = ?`
+  ).bind(articleId, auth.org.id).first() as any;
+
+  if (!originalArticle) return c.json({ error: 'Article not found' }, 404);
+
+  try {
+    const translatedResult = await translateContent(apiKey, {
+      content: originalArticle.content,
+      title: originalArticle.title.replace(/^[🇺🇸🇰🇷🇯🇵🇨🇳🇪🇸🇩🇪🇫🇷🇧🇷]\s*/, ''), // Remove existing flag
+      metaTitle: originalArticle.meta_title,
+      metaDescription: originalArticle.meta_description,
+      faqs: JSON.parse(originalArticle.faqs || '[]'),
+      tags: JSON.parse(originalArticle.tags || '[]'),
+      sourceLanguage: source_language as SupportedLanguage,
+      targetLanguage: target_language as SupportedLanguage,
+    });
+
+    const targetLangInfo = SUPPORTED_LANGUAGES[target_language as SupportedLanguage];
+
+    // Create new translated article
+    const newArticle = {
+      id: generateId(),
+      org_id: auth.org.id,
+      keyword_id: originalArticle.keyword_id,
+      cluster_id: originalArticle.cluster_id,
+      title: `${targetLangInfo.flag} ${translatedResult.title}`,
+      slug: generateSlug(translatedResult.title),
+      content: translatedResult.content,
+      meta_title: translatedResult.metaTitle,
+      meta_description: translatedResult.metaDescription,
+      excerpt: originalArticle.excerpt, // Keep original excerpt or translate
+      word_count: countWords(translatedResult.content),
+      reading_time: calculateReadingTime(translatedResult.content),
+      categories: JSON.parse(originalArticle.categories || '[]'),
+      tags: translatedResult.tags,
+      faqs: translatedResult.faqs,
+      status: 'draft',
+      seo_score: calculateSEOScore({
+        title: translatedResult.title,
+        content: translatedResult.content,
+        meta_title: translatedResult.metaTitle,
+        meta_description: translatedResult.metaDescription,
+        faqs: JSON.stringify(translatedResult.faqs),
+      }),
+    };
+
+    // Save translated article
+    await c.env.DB.prepare(
+      `INSERT INTO articles (id, org_id, keyword_id, cluster_id, title, slug, content, meta_title, meta_description, excerpt, word_count, reading_time, categories, tags, faqs, status, seo_score)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    ).bind(
+      newArticle.id, newArticle.org_id, newArticle.keyword_id, newArticle.cluster_id,
+      newArticle.title, newArticle.slug, newArticle.content,
+      newArticle.meta_title, newArticle.meta_description, newArticle.excerpt,
+      newArticle.word_count, newArticle.reading_time,
+      JSON.stringify(newArticle.categories), JSON.stringify(newArticle.tags),
+      JSON.stringify(newArticle.faqs), newArticle.status, newArticle.seo_score
+    ).run();
+
+    // Increment posts used
+    await c.env.DB.prepare(
+      `UPDATE organizations SET posts_used_this_month = posts_used_this_month + 1 WHERE id = ?`
+    ).bind(auth.org.id).run();
+
+    return c.json({
+      ...newArticle,
+      original_article_id: articleId,
+      source_language: source_language,
+      target_language: target_language,
+      language_info: targetLangInfo,
+    });
+  } catch (e: any) {
+    console.error('Translation error:', e.message);
+    return c.json({ error: e.message }, 500);
+  }
 });
 
 // Stripe Webhook Handler

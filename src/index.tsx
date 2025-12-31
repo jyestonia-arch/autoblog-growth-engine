@@ -310,6 +310,22 @@ app.get('/', (c) => {
               </div>
               <div class="p-6 space-y-4">
                 <div>
+                  <label class="block text-sm font-medium text-gray-700 mb-2">
+                    <i class="fas fa-globe mr-1"></i> Content Language
+                  </label>
+                  <select id="kr-language" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                    <option value="en">🇺🇸 English</option>
+                    <option value="ko">🇰🇷 한국어 (Korean)</option>
+                    <option value="ja">🇯🇵 日本語 (Japanese)</option>
+                    <option value="zh">🇨🇳 简体中文 (Chinese)</option>
+                    <option value="es">🇪🇸 Español (Spanish)</option>
+                    <option value="de">🇩🇪 Deutsch (German)</option>
+                    <option value="fr">🇫🇷 Français (French)</option>
+                    <option value="pt">🇧🇷 Português (Portuguese)</option>
+                  </select>
+                  <p class="text-xs text-gray-500 mt-1">Keywords will be generated in the selected language</p>
+                </div>
+                <div>
                   <label class="block text-sm font-medium text-gray-700 mb-2">Describe Your SaaS Product</label>
                   <textarea id="kr-description" rows="3" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="e.g., A project management tool that helps remote teams collaborate and track tasks efficiently"></textarea>
                 </div>
@@ -330,6 +346,57 @@ app.get('/', (c) => {
                 <button onclick="runKeywordResearch()" id="kr-submit" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition">
                   <i class="fas fa-search mr-2"></i> Generate Keywords
                 </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Language Picker Modal for Article Generation -->
+          <div id="language-picker-modal" class="hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div class="bg-white rounded-2xl w-full max-w-md">
+              <div class="p-6 border-b">
+                <div class="flex justify-between items-center">
+                  <h3 class="text-xl font-bold"><i class="fas fa-globe mr-2"></i>Choose Language</h3>
+                  <button onclick="closeLanguagePicker()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times text-xl"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="p-6">
+                <p class="text-sm text-gray-600 mb-4">Select the language for your article. This uses 1 post from your monthly limit.</p>
+                <div class="grid grid-cols-2 gap-3">
+                  <button onclick="generateWithLanguage('en')" class="p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition text-left">
+                    <span class="text-2xl mb-1 block">🇺🇸</span>
+                    <span class="font-medium text-gray-900">English</span>
+                  </button>
+                  <button onclick="generateWithLanguage('ko')" class="p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition text-left">
+                    <span class="text-2xl mb-1 block">🇰🇷</span>
+                    <span class="font-medium text-gray-900">한국어</span>
+                  </button>
+                  <button onclick="generateWithLanguage('ja')" class="p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition text-left">
+                    <span class="text-2xl mb-1 block">🇯🇵</span>
+                    <span class="font-medium text-gray-900">日本語</span>
+                  </button>
+                  <button onclick="generateWithLanguage('zh')" class="p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition text-left">
+                    <span class="text-2xl mb-1 block">🇨🇳</span>
+                    <span class="font-medium text-gray-900">简体中文</span>
+                  </button>
+                  <button onclick="generateWithLanguage('es')" class="p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition text-left">
+                    <span class="text-2xl mb-1 block">🇪🇸</span>
+                    <span class="font-medium text-gray-900">Español</span>
+                  </button>
+                  <button onclick="generateWithLanguage('de')" class="p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition text-left">
+                    <span class="text-2xl mb-1 block">🇩🇪</span>
+                    <span class="font-medium text-gray-900">Deutsch</span>
+                  </button>
+                  <button onclick="generateWithLanguage('fr')" class="p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition text-left">
+                    <span class="text-2xl mb-1 block">🇫🇷</span>
+                    <span class="font-medium text-gray-900">Français</span>
+                  </button>
+                  <button onclick="generateWithLanguage('pt')" class="p-4 border-2 border-gray-200 rounded-xl hover:border-indigo-500 hover:bg-indigo-50 transition text-left">
+                    <span class="text-2xl mb-1 block">🇧🇷</span>
+                    <span class="font-medium text-gray-900">Português</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>

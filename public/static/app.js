@@ -238,14 +238,19 @@ async function runKeywordResearch() {
   btn.disabled = true;
   btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i> Researching...';
 
+  const language = document.getElementById('kr-language')?.value || 'en';
   const data = {
     saas_description: document.getElementById('kr-description').value,
     target_icp: document.getElementById('kr-icp').value,
     industry: document.getElementById('kr-industry').value,
     competitors: document.getElementById('kr-competitors').value.split(',').map(s => s.trim()).filter(Boolean),
+    language: language,
   };
 
-  const res = await apiCall('/keywords/research', {
+  // Use multilingual endpoint for non-English languages
+  const endpoint = language !== 'en' ? '/keywords/research/multilingual' : '/keywords/research';
+  
+  const res = await apiCall(endpoint, {
     method: 'POST',
     body: JSON.stringify(data),
   });
@@ -260,7 +265,10 @@ async function runKeywordResearch() {
 
   closeKeywordResearch();
   loadKeywords();
-  alert(`Generated ${res.total_keywords} keywords across ${res.clusters.length} clusters!`);
+  
+  const langInfo = res.language_info;
+  const langName = langInfo ? `${langInfo.flag} ${langInfo.nativeName}` : 'English';
+  showToast(`Generated ${res.total_keywords} keywords in ${langName}!`, 'success');
 }
 
 async function loadKeywords() {
@@ -319,9 +327,11 @@ async function loadKeywords() {
         </td>
         <td class="px-6 py-4">
           ${k.status === 'pending' ? `
-            <button onclick="generateFromKeyword('${k.id}')" class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 transition">
-              Generate
-            </button>
+            <div class="flex gap-1">
+              <button onclick="showLanguagePickerForGeneration('${k.id}')" class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 transition" title="Choose language">
+                <i class="fas fa-globe mr-1"></i>Generate
+              </button>
+            </div>
           ` : '-'}
         </td>
       </tr>
@@ -331,22 +341,155 @@ async function loadKeywords() {
   }
 }
 
-async function generateFromKeyword(keywordId) {
-  if (!confirm('Generate an article for this keyword? This will use 1 post from your monthly limit.')) return;
+// Language picker modal for article generation
+let pendingKeywordId = null;
 
-  const res = await apiCall('/articles/generate', {
+function showLanguagePickerForGeneration(keywordId) {
+  pendingKeywordId = keywordId;
+  const modal = document.getElementById('language-picker-modal');
+  if (modal) {
+    modal.classList.remove('hidden');
+  } else {
+    // Fallback: generate in English directly
+    generateFromKeyword(keywordId, 'en');
+  }
+}
+
+function closeLanguagePicker() {
+  document.getElementById('language-picker-modal')?.classList.add('hidden');
+  pendingKeywordId = null;
+}
+
+async function generateWithLanguage(language) {
+  if (!pendingKeywordId) return;
+  closeLanguagePicker();
+  await generateFromKeyword(pendingKeywordId, language);
+}
+
+async function generateFromKeyword(keywordId, language = 'en') {
+  const langNames = {
+    en: '🇺🇸 English',
+    ko: '🇰🇷 한국어',
+    ja: '🇯🇵 日本語',
+    zh: '🇨🇳 简体中文',
+    es: '🇪🇸 Español',
+    de: '🇩🇪 Deutsch',
+    fr: '🇫🇷 Français',
+    pt: '🇧🇷 Português',
+  };
+
+  showToast(`Generating article in ${langNames[language] || language}...`, 'info');
+
+  // Use multilingual endpoint for non-English
+  const endpoint = language !== 'en' ? '/articles/generate/multilingual' : '/articles/generate';
+  
+  const res = await apiCall(endpoint, {
     method: 'POST',
-    body: JSON.stringify({ keyword_id: keywordId }),
+    body: JSON.stringify({ keyword_id: keywordId, language }),
   });
 
   if (res.error) {
-    alert(res.error);
+    showToast(res.error, 'error');
     return;
   }
 
-  alert('Article generated successfully!');
+  const langInfo = res.language_info;
+  const langDisplay = langInfo ? `${langInfo.flag} ${langInfo.nativeName}` : langNames[language];
+  showToast(`Article generated in ${langDisplay}!`, 'success');
   loadKeywords();
   loadDashboardData();
+}
+
+// Translate article function
+async function translateArticle(articleId) {
+  const modal = document.getElementById('translate-modal');
+  if (!modal) {
+    // Create modal dynamically
+    createTranslateModal();
+  }
+  
+  document.getElementById('translate-article-id').value = articleId;
+  document.getElementById('translate-modal').classList.remove('hidden');
+}
+
+function closeTranslateModal() {
+  document.getElementById('translate-modal')?.classList.add('hidden');
+}
+
+async function confirmTranslation() {
+  const articleId = document.getElementById('translate-article-id').value;
+  const targetLang = document.getElementById('translate-target-lang').value;
+  const btn = document.getElementById('translate-submit-btn');
+  
+  if (!articleId || !targetLang) return;
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Translating...';
+
+  const res = await apiCall(`/articles/${articleId}/translate`, {
+    method: 'POST',
+    body: JSON.stringify({ target_language: targetLang }),
+  });
+
+  btn.disabled = false;
+  btn.innerHTML = '<i class="fas fa-language mr-2"></i>Translate';
+
+  if (res.error) {
+    showToast(res.error, 'error');
+    return;
+  }
+
+  closeTranslateModal();
+  const langInfo = res.language_info;
+  showToast(`Article translated to ${langInfo.flag} ${langInfo.nativeName}!`, 'success');
+  loadArticles();
+  loadDashboardData();
+}
+
+function createTranslateModal() {
+  const modal = document.createElement('div');
+  modal.id = 'translate-modal';
+  modal.className = 'hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+  modal.innerHTML = \`
+    <div class="bg-white rounded-2xl w-full max-w-md">
+      <div class="p-6 border-b">
+        <div class="flex justify-between items-center">
+          <h3 class="text-xl font-bold"><i class="fas fa-language mr-2"></i>Translate Article</h3>
+          <button onclick="closeTranslateModal()" class="text-gray-400 hover:text-gray-600">
+            <i class="fas fa-times text-xl"></i>
+          </button>
+        </div>
+      </div>
+      <div class="p-6 space-y-4">
+        <input type="hidden" id="translate-article-id">
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-2">Target Language</label>
+          <select id="translate-target-lang" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+            <option value="ko">🇰🇷 한국어 (Korean)</option>
+            <option value="ja">🇯🇵 日本語 (Japanese)</option>
+            <option value="zh">🇨🇳 简体中文 (Chinese)</option>
+            <option value="es">🇪🇸 Español (Spanish)</option>
+            <option value="de">🇩🇪 Deutsch (German)</option>
+            <option value="fr">🇫🇷 Français (French)</option>
+            <option value="pt">🇧🇷 Português (Portuguese)</option>
+            <option value="en">🇺🇸 English</option>
+          </select>
+        </div>
+        <div class="bg-blue-50 rounded-lg p-4">
+          <p class="text-sm text-blue-800">
+            <i class="fas fa-info-circle mr-2"></i>
+            Translation creates a new article in the selected language. This uses 1 post from your monthly limit.
+          </p>
+        </div>
+      </div>
+      <div class="p-6 border-t bg-gray-50 rounded-b-2xl">
+        <button onclick="confirmTranslation()" id="translate-submit-btn" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition">
+          <i class="fas fa-language mr-2"></i>Translate
+        </button>
+      </div>
+    </div>
+  \`;
+  document.body.appendChild(modal);
 }
 
 // ==================== ARTICLES ====================
@@ -378,11 +521,14 @@ async function loadArticles() {
             <span class="text-xs text-gray-500"><i class="fas fa-clock mr-1"></i>${a.reading_time} min</span>
           </div>
           <div class="flex gap-2">
-            <button onclick="viewArticle('${a.id}')" class="p-2 text-gray-400 hover:text-indigo-600 transition">
+            <button onclick="viewArticle('${a.id}')" class="p-2 text-gray-400 hover:text-indigo-600 transition" title="View">
               <i class="fas fa-eye"></i>
             </button>
+            <button onclick="translateArticle('${a.id}')" class="p-2 text-gray-400 hover:text-blue-600 transition" title="Translate">
+              <i class="fas fa-language"></i>
+            </button>
             ${a.status === 'draft' ? `
-              <button onclick="publishArticle('${a.id}')" class="p-2 text-gray-400 hover:text-green-600 transition">
+              <button onclick="publishArticle('${a.id}')" class="p-2 text-gray-400 hover:text-green-600 transition" title="Publish">
                 <i class="fas fa-upload"></i>
               </button>
             ` : ''}
