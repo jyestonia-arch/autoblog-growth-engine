@@ -3,6 +3,7 @@
 export interface Bindings {
   DB: D1Database;
   ANTHROPIC_API_KEY?: string;
+  RESEND_API_KEY?: string;
 }
 
 // Organization & User Types

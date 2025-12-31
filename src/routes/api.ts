@@ -9,6 +9,7 @@ import { analyzeInternalLinks, getArticleLinkSuggestions, applyInternalLinks, ge
 import { testWordPressConnection, fullPublishWorkflow } from '../services/wordpress-publisher';
 import { getSEOHealthReport, getArticlePerformance } from '../services/seo-tracker';
 import { generateKeywordsWithClaude, generateArticleWithClaude, generateLinkSuggestionsWithClaude } from '../services/claude-api';
+import { sendArticlePublishedEmail, sendArticleScheduledEmail, sendUsageLimitWarningEmail } from '../services/email-service';
 import type { Bindings, Organization, User, Website, Keyword, Article, KeywordCluster, PLAN_CONFIGS } from '../types';
 
 const api = new Hono<{ Bindings: Bindings }>();
@@ -431,6 +432,29 @@ api.post('/articles/generate', async (c) => {
     `UPDATE organizations SET posts_used_this_month = posts_used_this_month + 1 WHERE id = ?`
   ).bind(auth.org.id).run();
 
+  // Check if usage limit warning needed
+  const newUsed = orgData.posts_used_this_month + 1;
+  const percentUsed = Math.round((newUsed / orgData.monthly_post_limit) * 100);
+  
+  if ((percentUsed >= 80 || percentUsed >= 100) && c.env.RESEND_API_KEY) {
+    const user = await c.env.DB.prepare(
+      `SELECT email FROM users WHERE org_id = ? AND role = 'owner' LIMIT 1`
+    ).bind(auth.org.id).first() as { email: string };
+
+    const org = await c.env.DB.prepare(
+      `SELECT name FROM organizations WHERE id = ?`
+    ).bind(auth.org.id).first() as { name: string };
+
+    if (user?.email && org?.name) {
+      sendUsageLimitWarningEmail(c.env.RESEND_API_KEY, user.email, {
+        organizationName: org.name,
+        postsUsed: newUsed,
+        postsLimit: orgData.monthly_post_limit,
+        percentUsed,
+      }).catch(e => console.error('Email send error:', e));
+    }
+  }
+
   return c.json({ ...result.article, ai_powered: false });
 });
 
@@ -517,6 +541,29 @@ api.put('/articles/:id', async (c) => {
     `UPDATE articles SET ${setClauses.join(', ')} WHERE id = ? AND org_id = ?`
   ).bind(...params).run();
 
+  // Send email notification when article is scheduled
+  if (updates.status === 'scheduled' && updates.scheduled_at && c.env.RESEND_API_KEY) {
+    // Get article and user details
+    const article = await c.env.DB.prepare(
+      `SELECT a.title, k.keyword as target_keyword FROM articles a
+       LEFT JOIN keywords k ON a.keyword_id = k.id
+       WHERE a.id = ?`
+    ).bind(articleId).first() as { title: string; target_keyword?: string };
+
+    const user = await c.env.DB.prepare(
+      `SELECT email FROM users WHERE org_id = ? AND role = 'owner' LIMIT 1`
+    ).bind(auth.org.id).first() as { email: string };
+
+    if (article && user?.email) {
+      // Non-blocking email send
+      sendArticleScheduledEmail(c.env.RESEND_API_KEY, user.email, {
+        articleTitle: article.title,
+        scheduledAt: updates.scheduled_at,
+        keyword: article.target_keyword || 'N/A',
+      }).catch(e => console.error('Email send error:', e));
+    }
+  }
+
   return c.json({ success: true });
 });
 
@@ -579,8 +626,10 @@ api.post('/articles/:id/publish', async (c) => {
   const { website_id, schedule_at } = await c.req.json();
 
   const article = await c.env.DB.prepare(
-    `SELECT * FROM articles WHERE id = ? AND org_id = ?`
-  ).bind(articleId, auth.org.id).first() as Article;
+    `SELECT a.*, k.keyword as target_keyword FROM articles a
+     LEFT JOIN keywords k ON a.keyword_id = k.id
+     WHERE a.id = ? AND a.org_id = ?`
+  ).bind(articleId, auth.org.id).first() as Article & { target_keyword?: string };
 
   if (!article) return c.json({ error: 'Article not found' }, 404);
 
@@ -591,6 +640,27 @@ api.post('/articles/:id/publish', async (c) => {
   if (!website) return c.json({ error: 'Website not found' }, 404);
 
   const result = await fullPublishWorkflow(article, website, c.env.DB, schedule_at);
+
+  // Send email notification on successful publish
+  if (result.success && c.env.RESEND_API_KEY) {
+    // Get user email
+    const user = await c.env.DB.prepare(
+      `SELECT email FROM users WHERE org_id = ? AND role = 'owner' LIMIT 1`
+    ).bind(auth.org.id).first() as { email: string };
+
+    if (user?.email) {
+      // Non-blocking email send
+      sendArticlePublishedEmail(c.env.RESEND_API_KEY, user.email, {
+        articleTitle: article.title,
+        articleUrl: result.publishedUrl || `${website.url}/blog/${article.slug}`,
+        publishedAt: new Date().toISOString(),
+        seoScore: article.seo_score,
+        wordCount: article.word_count,
+        keyword: (article as any).target_keyword || 'N/A',
+      }).catch(e => console.error('Email send error:', e));
+    }
+  }
+
   return c.json(result);
 });
 
@@ -699,6 +769,57 @@ api.get('/billing/plans', async (c) => {
     { tier: 'growth', name: 'Growth', price: 149, posts: 30, features: ['30 posts/month', 'Full keyword research', 'Internal linking', 'API access'] },
     { tier: 'scale', name: 'Scale', price: 349, posts: 60, features: ['60+ posts/month', 'Multiple domains', 'Priority support', 'Custom integrations'] },
   ]);
+});
+
+// ==================== EMAIL NOTIFICATION ROUTES ====================
+
+api.get('/notifications/status', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  return c.json({
+    email_notifications_enabled: !!c.env.RESEND_API_KEY,
+    notification_types: [
+      { type: 'article_published', description: 'When an article is published to your website', enabled: true },
+      { type: 'article_scheduled', description: 'When an article is scheduled via drag & drop', enabled: true },
+      { type: 'usage_warning', description: 'When you reach 80% or 100% of your monthly limit', enabled: true },
+      { type: 'weekly_report', description: 'Weekly content performance summary', enabled: false },
+    ],
+  });
+});
+
+api.post('/notifications/test', async (c) => {
+  const auth = await getAuthUser(c);
+  if (!auth) return c.json({ error: 'Unauthorized' }, 401);
+
+  if (!c.env.RESEND_API_KEY) {
+    return c.json({ error: 'Email notifications not configured. RESEND_API_KEY is required.' }, 400);
+  }
+
+  // Get user email
+  const user = await c.env.DB.prepare(
+    `SELECT email, name FROM users WHERE id = ?`
+  ).bind(auth.user.id).first() as { email: string; name: string };
+
+  if (!user?.email) {
+    return c.json({ error: 'User email not found' }, 400);
+  }
+
+  // Send test email
+  const result = await sendArticlePublishedEmail(c.env.RESEND_API_KEY, user.email, {
+    articleTitle: 'Test Article - Email Notifications Working!',
+    articleUrl: 'https://example.com/test-article',
+    publishedAt: new Date().toISOString(),
+    seoScore: 92,
+    wordCount: 1850,
+    keyword: 'test keyword',
+  });
+
+  if (result.success) {
+    return c.json({ success: true, message: `Test email sent to ${user.email}` });
+  } else {
+    return c.json({ error: result.error || 'Failed to send test email' }, 500);
+  }
 });
 
 export default api;

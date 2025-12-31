@@ -4,3 +4,8 @@
 # Anthropic Claude API Key
 # Get your key from: https://console.anthropic.com/
 ANTHROPIC_API_KEY=sk-ant-xxxxxxxxxxxxxxxxxxxxx
+
+# Resend Email API Key (for email notifications)
+# Get your key from: https://resend.com/api-keys
+# Free tier: 100 emails/day, 3,000 emails/month
+RESEND_API_KEY=re_xxxxxxxxxxxxxxxxxxxxx

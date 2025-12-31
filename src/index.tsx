@@ -567,6 +567,33 @@ app.get('/', (c) => {
               </div>
             </div>
           </div>
+
+          <!-- Email Notifications Section -->
+          <div class="bg-white rounded-xl p-6 shadow-sm mt-6">
+            <div class="flex items-center justify-between mb-6">
+              <div>
+                <h3 class="text-lg font-semibold">Email Notifications</h3>
+                <p class="text-sm text-gray-500">Get notified when important events happen</p>
+              </div>
+              <span id="email-status" class="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600">
+                Checking...
+              </span>
+            </div>
+
+            <div id="notification-types" class="space-y-4">
+              <!-- Will be populated by JavaScript -->
+            </div>
+
+            <div class="mt-6 pt-6 border-t">
+              <button onclick="sendTestEmail()" id="test-email-btn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed">
+                <i class="fas fa-paper-plane mr-2"></i>Send Test Email
+              </button>
+              <p class="text-xs text-gray-500 mt-2">
+                <i class="fas fa-info-circle mr-1"></i>
+                Email notifications powered by Resend. Configure RESEND_API_KEY in environment variables.
+              </p>
+            </div>
+          </div>
         </section>
 
         <!-- Calendar Section -->

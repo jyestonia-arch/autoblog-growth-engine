@@ -622,6 +622,9 @@ async function loadSEOHealth() {
   const health = await apiCall('/analytics/seo-health');
   if (health.error) return;
 
+  // Also load notification status
+  loadNotificationStatus();
+
   // Update health score circle
   const score = health.overallScore || 0;
   const circle = document.getElementById('health-circle');
@@ -694,6 +697,100 @@ function getStatusColor(status) {
     skipped: 'bg-red-100 text-red-700',
   };
   return colors[status] || 'bg-gray-100 text-gray-700';
+}
+
+// ==================== EMAIL NOTIFICATIONS ====================
+
+async function loadNotificationStatus() {
+  const status = await apiCall('/notifications/status');
+  
+  const statusEl = document.getElementById('email-status');
+  const typesEl = document.getElementById('notification-types');
+  const testBtn = document.getElementById('test-email-btn');
+  
+  if (status.error) {
+    statusEl.textContent = 'Error';
+    statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-600';
+    return;
+  }
+  
+  if (status.email_notifications_enabled) {
+    statusEl.innerHTML = '<i class="fas fa-check-circle mr-1"></i>Active';
+    statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-600';
+    testBtn.disabled = false;
+  } else {
+    statusEl.innerHTML = '<i class="fas fa-times-circle mr-1"></i>Not Configured';
+    statusEl.className = 'px-3 py-1 rounded-full text-sm font-medium bg-yellow-100 text-yellow-600';
+    testBtn.disabled = true;
+  }
+  
+  // Render notification types
+  if (status.notification_types && typesEl) {
+    typesEl.innerHTML = status.notification_types.map(nt => `
+      <div class="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 ${nt.enabled ? 'bg-green-100' : 'bg-gray-100'} rounded-lg flex items-center justify-center">
+            <i class="fas ${getNotificationIcon(nt.type)} ${nt.enabled ? 'text-green-600' : 'text-gray-400'}"></i>
+          </div>
+          <div>
+            <p class="font-medium text-gray-900">${formatNotificationType(nt.type)}</p>
+            <p class="text-sm text-gray-500">${nt.description}</p>
+          </div>
+        </div>
+        <span class="px-3 py-1 rounded-full text-xs font-medium ${nt.enabled ? 'bg-green-100 text-green-600' : 'bg-gray-100 text-gray-500'}">
+          ${nt.enabled ? 'Active' : 'Coming Soon'}
+        </span>
+      </div>
+    `).join('');
+  }
+}
+
+function getNotificationIcon(type) {
+  const icons = {
+    article_published: 'fa-check-circle',
+    article_scheduled: 'fa-calendar-check',
+    usage_warning: 'fa-exclamation-triangle',
+    weekly_report: 'fa-chart-bar',
+  };
+  return icons[type] || 'fa-bell';
+}
+
+function formatNotificationType(type) {
+  const names = {
+    article_published: 'Article Published',
+    article_scheduled: 'Article Scheduled',
+    usage_warning: 'Usage Limit Warning',
+    weekly_report: 'Weekly Report',
+  };
+  return names[type] || type;
+}
+
+async function sendTestEmail() {
+  const btn = document.getElementById('test-email-btn');
+  const originalText = btn.innerHTML;
+  
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Sending...';
+  
+  const res = await apiCall('/notifications/test', { method: 'POST' });
+  
+  btn.disabled = false;
+  
+  if (res.error) {
+    btn.innerHTML = '<i class="fas fa-times mr-2"></i>Failed';
+    btn.className = 'px-4 py-2 bg-red-600 text-white rounded-lg transition';
+    showToast(res.error, 'error');
+  } else {
+    btn.innerHTML = '<i class="fas fa-check mr-2"></i>Sent!';
+    btn.className = 'px-4 py-2 bg-green-600 text-white rounded-lg transition';
+    showToast(res.message, 'success');
+  }
+  
+  // Reset button after 3 seconds
+  setTimeout(() => {
+    btn.innerHTML = originalText;
+    btn.className = 'px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition disabled:opacity-50 disabled:cursor-not-allowed';
+  }, 3000);
 }
 
 // ==================== CONTENT CALENDAR ====================
