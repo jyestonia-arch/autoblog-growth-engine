@@ -16,8 +16,517 @@ app.route('/api', api);
 // Health check
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-// Main dashboard HTML
+// Landing page (public)
 app.get('/', (c) => {
+  return c.html(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoBlog Growth Engine - AI-Powered SEO Content for SaaS</title>
+  <meta name="description" content="Generate SEO-optimized blog content automatically. AI-powered keyword research, article generation, and publishing for SaaS startups.">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+  <style>
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .gradient-text { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-8px); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15); }
+    .feature-icon { background: linear-gradient(135deg, #667eea20 0%, #764ba220 100%); }
+    @keyframes float { 0%, 100% { transform: translateY(0px); } 50% { transform: translateY(-10px); } }
+    .float-animation { animation: float 3s ease-in-out infinite; }
+    @keyframes pulse-glow { 0%, 100% { box-shadow: 0 0 20px rgba(102, 126, 234, 0.3); } 50% { box-shadow: 0 0 40px rgba(102, 126, 234, 0.6); } }
+    .pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <!-- Navigation -->
+  <nav class="fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-sm border-b border-gray-100">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center gap-2">
+          <div class="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-lg flex items-center justify-center">
+            <i class="fas fa-rocket text-white"></i>
+          </div>
+          <span class="font-bold text-xl text-gray-900">AutoBlog</span>
+        </div>
+        <div class="hidden md:flex items-center gap-8">
+          <a href="#features" class="text-gray-600 hover:text-gray-900 transition">Features</a>
+          <a href="#how-it-works" class="text-gray-600 hover:text-gray-900 transition">How it Works</a>
+          <a href="#pricing" class="text-gray-600 hover:text-gray-900 transition">Pricing</a>
+          <a href="#demo" class="text-gray-600 hover:text-gray-900 transition">Demo</a>
+        </div>
+        <div class="flex items-center gap-3">
+          <a href="/app" class="text-gray-600 hover:text-gray-900 font-medium">Sign In</a>
+          <a href="/app?register=true" class="px-5 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition">
+            Start Free
+          </a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="pt-32 pb-20 px-4 gradient-bg relative overflow-hidden">
+    <div class="absolute inset-0 opacity-10">
+      <div class="absolute top-20 left-10 w-72 h-72 bg-white rounded-full filter blur-3xl"></div>
+      <div class="absolute bottom-20 right-10 w-96 h-96 bg-white rounded-full filter blur-3xl"></div>
+    </div>
+    <div class="max-w-7xl mx-auto text-center relative z-10">
+      <div class="inline-flex items-center gap-2 px-4 py-2 bg-white/20 backdrop-blur-sm rounded-full text-white text-sm mb-6">
+        <i class="fas fa-sparkles"></i>
+        <span>AI-Powered Content Engine for SaaS Growth</span>
+      </div>
+      <h1 class="text-4xl md:text-6xl font-bold text-white mb-6 leading-tight">
+        Automate Your Blog,<br/>
+        <span class="text-yellow-300">10x Your Organic Traffic</span>
+      </h1>
+      <p class="text-xl text-white/90 mb-8 max-w-3xl mx-auto">
+        Generate SEO-optimized blog posts with AI. From keyword research to publishing—
+        AutoBlog handles your entire content pipeline while you focus on building your product.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+        <a href="/app?register=true" class="px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-xl pulse-glow">
+          <i class="fas fa-rocket mr-2"></i>Start Free Trial
+        </a>
+        <a href="/demo" class="px-8 py-4 bg-white/20 backdrop-blur-sm text-white rounded-xl font-bold text-lg hover:bg-white/30 transition border border-white/30">
+          <i class="fas fa-play-circle mr-2"></i>Try Live Demo
+        </a>
+      </div>
+      <p class="text-white/70 text-sm">
+        <i class="fas fa-check-circle mr-1"></i>No credit card required
+        <span class="mx-3">•</span>
+        <i class="fas fa-check-circle mr-1"></i>14-day free trial
+        <span class="mx-3">•</span>
+        <i class="fas fa-check-circle mr-1"></i>Cancel anytime
+      </p>
+    </div>
+  </section>
+
+  <!-- Stats Section -->
+  <section class="py-12 bg-white border-b">
+    <div class="max-w-7xl mx-auto px-4">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+        <div>
+          <p class="text-4xl font-bold gradient-text">50K+</p>
+          <p class="text-gray-500">Articles Generated</p>
+        </div>
+        <div>
+          <p class="text-4xl font-bold gradient-text">500+</p>
+          <p class="text-gray-500">SaaS Companies</p>
+        </div>
+        <div>
+          <p class="text-4xl font-bold gradient-text">2M+</p>
+          <p class="text-gray-500">Organic Visitors</p>
+        </div>
+        <div>
+          <p class="text-4xl font-bold gradient-text">8</p>
+          <p class="text-gray-500">Languages Supported</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features Section -->
+  <section id="features" class="py-20 px-4">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          Everything You Need for <span class="gradient-text">Content Growth</span>
+        </h2>
+        <p class="text-xl text-gray-600 max-w-2xl mx-auto">
+          A complete content marketing suite designed specifically for SaaS companies
+        </p>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <!-- Feature 1 -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm card-hover border border-gray-100">
+          <div class="w-14 h-14 feature-icon rounded-xl flex items-center justify-center mb-6">
+            <i class="fas fa-key text-2xl text-indigo-600"></i>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-3">AI Keyword Research</h3>
+          <p class="text-gray-600 mb-4">
+            Discover high-intent keywords tailored to your SaaS niche. Analyze competition, search volume, and buyer intent automatically.
+          </p>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><i class="fas fa-check text-green-500 mr-2"></i>TOFU/MOFU/BOFU mapping</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Competitor analysis</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Long-tail opportunities</li>
+          </ul>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm card-hover border border-gray-100">
+          <div class="w-14 h-14 feature-icon rounded-xl flex items-center justify-center mb-6">
+            <i class="fas fa-magic text-2xl text-purple-600"></i>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-3">AI Article Generation</h3>
+          <p class="text-gray-600 mb-4">
+            Generate 2,000+ word SEO-optimized articles with proper structure, FAQs, and featured snippet targeting.
+          </p>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Claude Sonnet 4 powered</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>SEO best practices</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>8 languages supported</li>
+          </ul>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm card-hover border border-gray-100">
+          <div class="w-14 h-14 feature-icon rounded-xl flex items-center justify-center mb-6">
+            <i class="fas fa-link text-2xl text-blue-600"></i>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-3">Internal Linking</h3>
+          <p class="text-gray-600 mb-4">
+            Automatically analyze and suggest internal links to improve site structure and SEO performance.
+          </p>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Orphan page detection</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Smart anchor text</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Pillar/cluster model</li>
+          </ul>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm card-hover border border-gray-100">
+          <div class="w-14 h-14 feature-icon rounded-xl flex items-center justify-center mb-6">
+            <i class="fas fa-calendar-alt text-2xl text-green-600"></i>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-3">Content Calendar</h3>
+          <p class="text-gray-600 mb-4">
+            Plan and schedule your content pipeline with drag-and-drop calendar. Never miss a publishing date.
+          </p>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Drag & drop scheduling</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Month/week views</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Auto-reminders</li>
+          </ul>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm card-hover border border-gray-100">
+          <div class="w-14 h-14 feature-icon rounded-xl flex items-center justify-center mb-6">
+            <i class="fab fa-wordpress text-2xl text-blue-800"></i>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-3">Auto-Publishing</h3>
+          <p class="text-gray-600 mb-4">
+            Connect your WordPress site and automatically publish scheduled content with proper formatting.
+          </p>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><i class="fas fa-check text-green-500 mr-2"></i>WordPress integration</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Auto meta tags</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Category mapping</li>
+          </ul>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm card-hover border border-gray-100">
+          <div class="w-14 h-14 feature-icon rounded-xl flex items-center justify-center mb-6">
+            <i class="fas fa-chart-line text-2xl text-red-600"></i>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-3">SEO Analytics</h3>
+          <p class="text-gray-600 mb-4">
+            Track rankings, impressions, and clicks with Google Search Console integration. Real-time insights.
+          </p>
+          <ul class="space-y-2 text-sm text-gray-500">
+            <li><i class="fas fa-check text-green-500 mr-2"></i>GSC integration</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>Ranking tracking</li>
+            <li><i class="fas fa-check text-green-500 mr-2"></i>SEO health score</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How it Works Section -->
+  <section id="how-it-works" class="py-20 px-4 bg-gray-900 text-white">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold mb-4">
+          From Zero to <span class="text-yellow-400">Published</span> in Minutes
+        </h2>
+        <p class="text-xl text-gray-400">Four simple steps to automated content growth</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div class="text-center relative">
+          <div class="w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl font-bold">1</div>
+          <h3 class="text-xl font-bold mb-3">Describe Your SaaS</h3>
+          <p class="text-gray-400">Tell us about your product, target audience, and competitors</p>
+          <div class="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-indigo-600 to-transparent -z-10"></div>
+        </div>
+        <div class="text-center relative">
+          <div class="w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl font-bold">2</div>
+          <h3 class="text-xl font-bold mb-3">Get AI Keywords</h3>
+          <p class="text-gray-400">Receive tailored keyword clusters based on buyer intent and funnel stage</p>
+          <div class="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-purple-600 to-transparent -z-10"></div>
+        </div>
+        <div class="text-center relative">
+          <div class="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl font-bold">3</div>
+          <h3 class="text-xl font-bold mb-3">Generate Articles</h3>
+          <p class="text-gray-400">One-click SEO-optimized article generation for each keyword</p>
+          <div class="hidden md:block absolute top-8 left-full w-full h-0.5 bg-gradient-to-r from-blue-600 to-transparent -z-10"></div>
+        </div>
+        <div class="text-center">
+          <div class="w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mx-auto mb-6 text-2xl font-bold">4</div>
+          <h3 class="text-xl font-bold mb-3">Schedule & Publish</h3>
+          <p class="text-gray-400">Auto-publish to WordPress or download for manual publishing</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Demo Preview Section -->
+  <section id="demo" class="py-20 px-4 bg-gradient-to-b from-gray-50 to-white">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-12">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          See It In Action
+        </h2>
+        <p class="text-xl text-gray-600 mb-8">
+          Try the live demo—no signup required
+        </p>
+        <a href="/demo" class="inline-flex items-center gap-2 px-8 py-4 bg-indigo-600 text-white rounded-xl font-bold text-lg hover:bg-indigo-700 transition shadow-lg">
+          <i class="fas fa-play-circle"></i>
+          Launch Interactive Demo
+        </a>
+      </div>
+
+      <!-- Dashboard Preview Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-12">
+        <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-file-alt text-blue-600"></i>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-gray-900">24</p>
+              <p class="text-sm text-gray-500">Articles Generated</p>
+            </div>
+          </div>
+          <div class="flex items-center text-green-600 text-sm">
+            <i class="fas fa-arrow-up mr-1"></i>
+            <span>+8 this month</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-key text-purple-600"></i>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-gray-900">156</p>
+              <p class="text-sm text-gray-500">Keywords Tracked</p>
+            </div>
+          </div>
+          <div class="flex items-center text-green-600 text-sm">
+            <i class="fas fa-arrow-up mr-1"></i>
+            <span>32 ranking top 10</span>
+          </div>
+        </div>
+
+        <div class="bg-white rounded-xl p-6 shadow-lg border border-gray-100">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center">
+              <i class="fas fa-chart-line text-green-600"></i>
+            </div>
+            <div>
+              <p class="text-2xl font-bold text-gray-900">45.2K</p>
+              <p class="text-sm text-gray-500">Monthly Visitors</p>
+            </div>
+          </div>
+          <div class="flex items-center text-green-600 text-sm">
+            <i class="fas fa-arrow-up mr-1"></i>
+            <span>+127% vs last month</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Pricing Section -->
+  <section id="pricing" class="py-20 px-4">
+    <div class="max-w-7xl mx-auto">
+      <div class="text-center mb-16">
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          Simple, Transparent <span class="gradient-text">Pricing</span>
+        </h2>
+        <p class="text-xl text-gray-600">Start free, upgrade when you're ready</p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-5xl mx-auto">
+        <!-- Starter -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 card-hover">
+          <h3 class="text-xl font-bold text-gray-900 mb-2">Starter</h3>
+          <p class="text-gray-500 mb-6">For small blogs getting started</p>
+          <div class="mb-6">
+            <span class="text-4xl font-bold text-gray-900">$49</span>
+            <span class="text-gray-500">/month</span>
+          </div>
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>10 posts/month
+            </li>
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>Basic keyword research
+            </li>
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>Single website
+            </li>
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>Email support
+            </li>
+          </ul>
+          <a href="/app?register=true&plan=starter" class="block w-full py-3 text-center border-2 border-indigo-600 text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition">
+            Get Started
+          </a>
+        </div>
+
+        <!-- Growth -->
+        <div class="bg-white rounded-2xl p-8 shadow-lg border-2 border-indigo-500 card-hover relative">
+          <div class="absolute -top-4 left-1/2 -translate-x-1/2">
+            <span class="px-4 py-1 bg-indigo-500 text-white text-sm font-bold rounded-full">MOST POPULAR</span>
+          </div>
+          <h3 class="text-xl font-bold text-gray-900 mb-2">Growth</h3>
+          <p class="text-gray-500 mb-6">For growing SaaS companies</p>
+          <div class="mb-6">
+            <span class="text-4xl font-bold text-gray-900">$149</span>
+            <span class="text-gray-500">/month</span>
+          </div>
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>30 posts/month
+            </li>
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>Full keyword research
+            </li>
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>Internal linking AI
+            </li>
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>GSC integration
+            </li>
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>API access
+            </li>
+            <li class="flex items-center gap-2 text-indigo-600 font-medium">
+              <i class="fas fa-gift text-indigo-500"></i>14-day free trial
+            </li>
+          </ul>
+          <a href="/app?register=true&plan=growth" class="block w-full py-3 text-center bg-indigo-600 text-white rounded-xl font-semibold hover:bg-indigo-700 transition">
+            Start Free Trial
+          </a>
+        </div>
+
+        <!-- Scale -->
+        <div class="bg-white rounded-2xl p-8 shadow-sm border border-gray-200 card-hover">
+          <h3 class="text-xl font-bold text-gray-900 mb-2">Scale</h3>
+          <p class="text-gray-500 mb-6">For content-heavy operations</p>
+          <div class="mb-6">
+            <span class="text-4xl font-bold text-gray-900">$349</span>
+            <span class="text-gray-500">/month</span>
+          </div>
+          <ul class="space-y-3 mb-8">
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>60+ posts/month
+            </li>
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>Multiple domains
+            </li>
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>Priority support
+            </li>
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>White-label
+            </li>
+            <li class="flex items-center gap-2 text-gray-600">
+              <i class="fas fa-check text-green-500"></i>Custom integrations
+            </li>
+            <li class="flex items-center gap-2 text-indigo-600 font-medium">
+              <i class="fas fa-gift text-indigo-500"></i>14-day free trial
+            </li>
+          </ul>
+          <a href="/app?register=true&plan=scale" class="block w-full py-3 text-center border-2 border-indigo-600 text-indigo-600 rounded-xl font-semibold hover:bg-indigo-50 transition">
+            Start Free Trial
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Section -->
+  <section class="py-20 px-4 gradient-bg">
+    <div class="max-w-4xl mx-auto text-center">
+      <h2 class="text-3xl md:text-4xl font-bold text-white mb-6">
+        Ready to 10x Your Organic Traffic?
+      </h2>
+      <p class="text-xl text-white/90 mb-8">
+        Join 500+ SaaS companies using AutoBlog to automate their content marketing.
+      </p>
+      <div class="flex flex-col sm:flex-row gap-4 justify-center">
+        <a href="/app?register=true" class="px-8 py-4 bg-white text-indigo-600 rounded-xl font-bold text-lg hover:bg-gray-100 transition shadow-xl">
+          Start Your Free Trial
+        </a>
+        <a href="/demo" class="px-8 py-4 bg-transparent text-white rounded-xl font-bold text-lg hover:bg-white/10 transition border-2 border-white">
+          Try Demo First
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-400 py-12 px-4">
+    <div class="max-w-7xl mx-auto">
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
+        <div>
+          <div class="flex items-center gap-2 mb-4">
+            <div class="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+              <i class="fas fa-rocket text-white text-sm"></i>
+            </div>
+            <span class="font-bold text-white">AutoBlog</span>
+          </div>
+          <p class="text-sm">AI-powered content marketing for SaaS growth.</p>
+        </div>
+        <div>
+          <h4 class="font-semibold text-white mb-4">Product</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#features" class="hover:text-white transition">Features</a></li>
+            <li><a href="#pricing" class="hover:text-white transition">Pricing</a></li>
+            <li><a href="/demo" class="hover:text-white transition">Demo</a></li>
+            <li><a href="/app" class="hover:text-white transition">Login</a></li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold text-white mb-4">Languages</h4>
+          <ul class="space-y-2 text-sm">
+            <li>🇺🇸 English</li>
+            <li>🇰🇷 한국어</li>
+            <li>🇯🇵 日本語</li>
+            <li>🇨🇳 简体中文</li>
+          </ul>
+        </div>
+        <div>
+          <h4 class="font-semibold text-white mb-4">Support</h4>
+          <ul class="space-y-2 text-sm">
+            <li><a href="#" class="hover:text-white transition">Documentation</a></li>
+            <li><a href="#" class="hover:text-white transition">API Reference</a></li>
+            <li><a href="#" class="hover:text-white transition">Contact</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="border-t border-gray-800 pt-8 text-center text-sm">
+        <p>&copy; 2024 AutoBlog Growth Engine. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>`);
+});
+
+// Demo page (with sample data, no auth required)
+app.get('/demo', (c) => {
   return c.html(`<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1153,6 +1662,286 @@ app.get('/', (c) => {
               </div>
             </div>
           </div>
+        </section>
+      </main>
+    </div>
+  </div>
+
+  <script src="/static/demo.js"></script>
+</body>
+</html>`);
+});
+
+// Main App (requires auth)
+app.get('/app', (c) => {
+  return c.html(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AutoBlog Growth Engine - Dashboard</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .card-hover { transition: all 0.3s ease; }
+    .card-hover:hover { transform: translateY(-4px); box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1); }
+    .pulse-dot { animation: pulse 2s infinite; }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    .sidebar { width: 260px; min-height: 100vh; }
+    .main-content { margin-left: 260px; }
+    @media (max-width: 1024px) { .sidebar { display: none; } .main-content { margin-left: 0; } }
+    .draggable-article { touch-action: none; user-select: none; }
+    .draggable-article:active { cursor: grabbing; }
+    .calendar-drop-zone { transition: all 0.2s ease; }
+    .calendar-drop-zone.drag-over { background-color: #EEF2FF !important; transform: scale(1.02); }
+  </style>
+</head>
+<body class="bg-gray-50">
+  <div id="app">
+    <!-- Loading State -->
+    <div id="loading" class="flex items-center justify-center min-h-screen">
+      <div class="text-center">
+        <i class="fas fa-spinner fa-spin text-4xl text-indigo-600 mb-4"></i>
+        <p class="text-gray-600">Loading AutoBlog...</p>
+      </div>
+    </div>
+
+    <!-- Auth Screen -->
+    <div id="auth-screen" class="hidden min-h-screen gradient-bg flex items-center justify-center p-4">
+      <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
+        <div class="text-center mb-8">
+          <a href="/" class="inline-flex items-center justify-center w-16 h-16 bg-indigo-100 rounded-full mb-4 hover:bg-indigo-200 transition">
+            <i class="fas fa-rocket text-2xl text-indigo-600"></i>
+          </a>
+          <h1 class="text-2xl font-bold text-gray-900">AutoBlog Growth Engine</h1>
+          <p class="text-gray-500 mt-2">Automated SEO Content for SaaS Startups</p>
+        </div>
+
+        <div id="login-form">
+          <div class="space-y-4">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" id="login-email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="you@company.com">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input type="password" id="login-password" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent" placeholder="••••••••">
+            </div>
+            <button onclick="handleLogin()" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition">
+              Sign In
+            </button>
+          </div>
+          <div class="text-center mt-4">
+            <a href="/demo" class="text-sm text-indigo-600 hover:underline">
+              <i class="fas fa-play-circle mr-1"></i>Try Demo First
+            </a>
+          </div>
+          <p class="text-center mt-6 text-gray-600">
+            Don't have an account? <button onclick="showRegister()" class="text-indigo-600 font-semibold hover:underline">Sign up</button>
+          </p>
+        </div>
+
+        <div id="register-form" class="hidden">
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Your Name</label>
+                <input type="text" id="reg-name" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="John Doe">
+              </div>
+              <div>
+                <label class="block text-sm font-medium text-gray-700 mb-1">Company</label>
+                <input type="text" id="reg-company" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="Acme Inc">
+              </div>
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input type="email" id="reg-email" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="you@company.com">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Password</label>
+              <input type="password" id="reg-password" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500" placeholder="••••••••">
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Industry</label>
+              <select id="reg-industry" class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500">
+                <option value="">Select industry...</option>
+                <option value="saas">SaaS / Software</option>
+                <option value="fintech">Fintech</option>
+                <option value="healthtech">Healthtech</option>
+                <option value="ecommerce">E-commerce</option>
+                <option value="martech">Martech</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <button onclick="handleRegister()" class="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold hover:bg-indigo-700 transition">
+              Create Account
+            </button>
+          </div>
+          <p class="text-center mt-6 text-gray-600">
+            Already have an account? <button onclick="showLogin()" class="text-indigo-600 font-semibold hover:underline">Sign in</button>
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Dashboard placeholder - will use same structure as demo -->
+    <div id="dashboard" class="hidden">
+      <aside class="sidebar fixed left-0 top-0 bg-gray-900 text-white p-6">
+        <a href="/" class="flex items-center gap-3 mb-8">
+          <div class="w-10 h-10 bg-indigo-500 rounded-lg flex items-center justify-center">
+            <i class="fas fa-rocket"></i>
+          </div>
+          <div>
+            <h1 class="font-bold text-lg">AutoBlog</h1>
+            <p class="text-xs text-gray-400">Growth Engine</p>
+          </div>
+        </a>
+
+        <nav class="space-y-2">
+          <a href="#" onclick="showSection('overview')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg bg-gray-800 text-white">
+            <i class="fas fa-chart-line w-5"></i> Overview
+          </a>
+          <a href="#" onclick="showSection('keywords')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
+            <i class="fas fa-key w-5"></i> Keywords
+          </a>
+          <a href="#" onclick="showSection('articles')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
+            <i class="fas fa-file-alt w-5"></i> Articles
+          </a>
+          <a href="#" onclick="showSection('calendar')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
+            <i class="fas fa-calendar-alt w-5"></i> Calendar
+          </a>
+          <a href="#" onclick="showSection('analytics')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
+            <i class="fas fa-chart-bar w-5"></i> Analytics
+          </a>
+          <a href="#" onclick="showSection('billing')" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg text-gray-400 hover:bg-gray-800 hover:text-white transition">
+            <i class="fas fa-credit-card w-5"></i> Billing
+          </a>
+        </nav>
+
+        <div class="absolute bottom-6 left-6 right-6">
+          <div class="bg-gray-800 rounded-lg p-4 mb-4">
+            <div class="flex justify-between text-sm mb-2">
+              <span class="text-gray-400">Posts Used</span>
+              <span id="usage-text" class="text-white font-medium">0/10</span>
+            </div>
+            <div class="w-full bg-gray-700 rounded-full h-2">
+              <div id="usage-bar" class="bg-indigo-500 h-2 rounded-full" style="width: 0%"></div>
+            </div>
+          </div>
+          <button onclick="handleLogout()" class="flex items-center gap-2 text-gray-400 hover:text-white transition">
+            <i class="fas fa-sign-out-alt"></i> Sign Out
+          </button>
+        </div>
+      </aside>
+
+      <main class="main-content min-h-screen p-8">
+        <section id="section-overview" class="section">
+          <div class="mb-8">
+            <h2 class="text-2xl font-bold text-gray-900">Dashboard Overview</h2>
+            <p class="text-gray-500">Your content growth at a glance</p>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+            <div class="bg-white rounded-xl p-6 shadow-sm card-hover">
+              <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <i class="fas fa-file-alt text-blue-600 text-xl"></i>
+                </div>
+              </div>
+              <h3 id="stat-total-articles" class="text-3xl font-bold text-gray-900">0</h3>
+              <p class="text-gray-500">Total Articles</p>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-sm card-hover">
+              <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+                  <i class="fas fa-check-circle text-green-600 text-xl"></i>
+                </div>
+              </div>
+              <h3 id="stat-published" class="text-3xl font-bold text-gray-900">0</h3>
+              <p class="text-gray-500">Published</p>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-sm card-hover">
+              <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+                  <i class="fas fa-key text-purple-600 text-xl"></i>
+                </div>
+              </div>
+              <h3 id="stat-keywords" class="text-3xl font-bold text-gray-900">0</h3>
+              <p class="text-gray-500">Keywords</p>
+            </div>
+
+            <div class="bg-white rounded-xl p-6 shadow-sm card-hover">
+              <div class="flex items-center justify-between mb-4">
+                <div class="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                  <i class="fas fa-star text-orange-600 text-xl"></i>
+                </div>
+              </div>
+              <h3 id="stat-seo-score" class="text-3xl font-bold text-gray-900">0</h3>
+              <p class="text-gray-500">Avg SEO Score</p>
+            </div>
+          </div>
+
+          <!-- Quick Start Guide -->
+          <div class="bg-gradient-to-r from-indigo-500 to-purple-600 rounded-xl p-8 text-white mb-8">
+            <h3 class="text-xl font-bold mb-4">🚀 Get Started in 3 Steps</h3>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div class="flex items-start gap-4">
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold">1</div>
+                <div>
+                  <h4 class="font-semibold">Keyword Research</h4>
+                  <p class="text-white/80 text-sm">Describe your SaaS and get AI-generated keyword clusters</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-4">
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold">2</div>
+                <div>
+                  <h4 class="font-semibold">Generate Articles</h4>
+                  <p class="text-white/80 text-sm">One-click to create SEO-optimized blog posts</p>
+                </div>
+              </div>
+              <div class="flex items-start gap-4">
+                <div class="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center font-bold">3</div>
+                <div>
+                  <h4 class="font-semibold">Publish & Track</h4>
+                  <p class="text-white/80 text-sm">Auto-publish to WordPress and monitor rankings</p>
+                </div>
+              </div>
+            </div>
+            <div class="mt-6">
+              <button onclick="showSection('keywords'); openKeywordResearch()" class="px-6 py-3 bg-white text-indigo-600 rounded-lg font-semibold hover:bg-gray-100 transition">
+                <i class="fas fa-search mr-2"></i>Start Keyword Research
+              </button>
+            </div>
+          </div>
+
+          <div id="top-articles" class="bg-white rounded-xl p-6 shadow-sm">
+            <h3 class="text-lg font-semibold text-gray-900 mb-4">Top Performing Articles</h3>
+            <p class="text-gray-500 text-center py-8">No articles yet. Start by researching keywords!</p>
+          </div>
+        </section>
+
+        <section id="section-keywords" class="section hidden">
+          <p class="text-gray-500 text-center py-12">Keywords section loading...</p>
+        </section>
+
+        <section id="section-articles" class="section hidden">
+          <p class="text-gray-500 text-center py-12">Articles section loading...</p>
+        </section>
+
+        <section id="section-calendar" class="section hidden">
+          <p class="text-gray-500 text-center py-12">Calendar section loading...</p>
+        </section>
+
+        <section id="section-analytics" class="section hidden">
+          <p class="text-gray-500 text-center py-12">Analytics section loading...</p>
+        </section>
+
+        <section id="section-billing" class="section hidden">
+          <p class="text-gray-500 text-center py-12">Billing section loading...</p>
         </section>
       </main>
     </div>
